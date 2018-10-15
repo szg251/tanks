@@ -1,0 +1,11 @@
+/* This file is for your main application css. */
+
+@import "./phoenix.css";
+
+body {
+  margin: 0;
+}
+
+section {
+  margin: 0;
+}
