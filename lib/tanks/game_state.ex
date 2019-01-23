@@ -29,8 +29,26 @@ defmodule Tanks.GameState do
     GenServer.cast(__MODULE__, {:move, tankId, inertia})
   end
 
+  defp schedule_tick() do
+    Process.send_after(self(), :tick, 1000)
+  end
+
+  ### SERVER
+
   def init(:ok) do
+    schedule_tick()
     {:ok, %GameState{}}
+  end
+
+  # Evaluate movement
+  def handle_info(:tick, state) do
+    updateTank = fn {k, tank} -> {k, %Tank{tank | x: tank.x + tank.inertia}} end
+
+    newTanks = state.tanks |> Enum.map(updateTank)
+    newState = %GameState{state | tanks: newTanks}
+
+    schedule_tick()
+    {:noreply, newState}
   end
 
   def handle_call(:join, _from, state) do
@@ -55,7 +73,7 @@ defmodule Tanks.GameState do
   def handle_cast({:move, tankId, inertia}, state) do
     updateTank = fn tank -> %Tank{tank | inertia: inertia |> min(5) |> max(-5)} end
 
-    newTanks = Map.update!(state.tanks, tankId, updateTank) |> IO.inspect()
+    newTanks = Map.update!(state.tanks, tankId, updateTank)
     newState = %GameState{state | tanks: newTanks}
 
     {:noreply, newState}
