@@ -10,7 +10,8 @@ defmodule Tanks.Application do
     children = [
       # Start the endpoint when the application starts
       TanksWeb.Endpoint,
-      TanksWeb.Presence
+      TanksWeb.Presence,
+      Tanks.GameState
       # Starts a worker by calling: Tanks.Worker.start_link(arg)
       # {Tanks.Worker, arg},
     ]
