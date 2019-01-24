@@ -1,18 +1,3 @@
-defmodule GameState do
-  defstruct nextId: 0, tanks: Map.new()
-end
-
-defmodule Tank do
-  @max_velocity 5
-
-  defstruct health: 100, width: 50, height: 20, x: 0, y: 0, velocity: 0
-
-  # Move a tank (validate and set velocity)
-  def move(tank, velocity) do
-    %Tank{tank | velocity: velocity |> min(@max_velocity) |> max(-@max_velocity)}
-  end
-end
-
 defmodule Field do
   @field_width 1000
   @field_height 600
@@ -25,34 +10,32 @@ defmodule Field do
   end
 end
 
-defmodule Tanks.GameState do
+defmodule GameState do
   use GenServer
+
+  defstruct tanks: Map.new()
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, :ok, opts ++ [name: __MODULE__])
   end
 
-  def join do
-    GenServer.call(__MODULE__, :join)
+  def create_tank(tankId) do
+    GenServer.call(__MODULE__, {:create_tank, tankId})
   end
 
   def get_tanks do
     GenServer.call(__MODULE__, :get_tanks)
   end
 
-  def leave(tankId) do
-    GenServer.cast(__MODULE__, {:leave, tankId})
-  end
-
-  def move(tankId, velocity) do
-    GenServer.cast(__MODULE__, {:move, tankId, velocity})
+  def remove_tank(tankId) do
+    GenServer.cast(__MODULE__, {:remove_tank, tankId})
   end
 
   defp schedule_tick() do
     Process.send_after(self(), :tick, 100)
   end
 
-  ### SERVER
+  ### SERVER ###
 
   def init(:ok) do
     schedule_tick()
@@ -61,46 +44,35 @@ defmodule Tanks.GameState do
 
   # Evaluate movement
   def handle_info(:tick, state) do
-    updateTank = fn {k, tank} ->
-      {newX, newY} = Field.move_object(tank.width, tank.x, tank.velocity, tank.height, tank.y)
-      {k, %Tank{tank | x: newX, y: newY}}
-    end
-
-    newTanks = state.tanks |> Enum.map(updateTank) |> Enum.into(%{})
-    newState = %GameState{state | tanks: newTanks}
-
+    state.tanks |> Map.values() |> Enum.map(&Tank.move(&1))
     schedule_tick()
-    {:noreply, newState}
+    {:noreply, state}
   end
 
   # Create a new tank
-  def handle_call(:join, _from, state) do
-    newState = %{
-      state
-      | tanks: state.tanks |> Map.put(state.nextId, %Tank{}),
-        nextId: state.nextId + 1
-    }
-
-    {:reply, state.nextId, newState}
+  def handle_call({:create_tank, tankId}, _from, state) do
+    if !Map.has_key?(state.tanks, tankId) do
+      {:ok, tankPid} = Tank.start_link([])
+      newState = %{state | tanks: state.tanks |> Map.put_new(tankId, tankPid)}
+      {:reply, {:ok, tankPid}, newState}
+    else
+      {:reply, {:err, "Already existing"}, state}
+    end
   end
 
   # Get all tanks
   def handle_call(:get_tanks, _from, state) do
-    {:reply, state.tanks, state}
+    tanks =
+      state.tanks
+      |> Map.values()
+      |> Enum.map(fn pid -> %{pid: pid, tank: Tank.get_state(pid)} end)
+
+    {:reply, tanks, state}
   end
 
-  def handle_cast({:leave, tankId}, state) do
+  # Remove tank
+  def handle_cast({:remove_tank, tankId}, state) do
     newState = %{state | tanks: Map.delete(state.tanks, tankId)}
-    {:noreply, newState}
-  end
-
-  # Move a tank (set the velocity)
-  def handle_cast({:move, tankId, velocity}, state) do
-    updateTank = fn tank -> Tank.move(tank, velocity) end
-
-    newTanks = Map.update!(state.tanks, tankId, updateTank)
-    newState = %GameState{state | tanks: newTanks}
-
     {:noreply, newState}
   end
 end
