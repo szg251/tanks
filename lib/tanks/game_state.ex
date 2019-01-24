@@ -51,6 +51,7 @@ defmodule Tanks.GameState do
     {:noreply, newState}
   end
 
+  # Create a new tank
   def handle_call(:join, _from, state) do
     newState = %{
       state
@@ -61,6 +62,7 @@ defmodule Tanks.GameState do
     {:reply, state.nextId, newState}
   end
 
+  # Get all tanks
   def handle_call(:get_tanks, _from, state) do
     {:reply, state.tanks, state}
   end
@@ -70,6 +72,7 @@ defmodule Tanks.GameState do
     {:noreply, newState}
   end
 
+  # Move a tank (set the velocity)
   def handle_cast({:move, tankId, inertia}, state) do
     updateTank = fn tank -> %Tank{tank | inertia: inertia |> min(5) |> max(-5)} end
 
