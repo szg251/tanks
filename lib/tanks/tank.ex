@@ -2,11 +2,19 @@ defmodule Bullet do
   @enforce_keys [:x, :y, :velocity_x, :velocity_y]
   defstruct [:x, :y, :velocity_x, :velocity_y]
 
+  @doc """
+  Evaluate the movement of a bullet
+
+    iex> bullet = %Bullet{x: 50, y: 50, velocity_x: 5, velocity_y: -5}
+    iex> Bullet.move(bullet)
+    {:ok, %Bullet{x: 55, y: 45, velocity_x: 5, velocity_y: -5}}
+
+  """
   def move(bullet) do
     movement = Field.move_object(3, bullet.x, bullet.velocity_x, 3, bullet.y, bullet.velocity_y)
 
     case movement do
-      {:ok, newX, newY} -> %Bullet{bullet | x: newX, y: newY}
+      {:ok, newX, newY} -> {:ok, %Bullet{bullet | x: newX, y: newY}}
       :error -> :error
     end
   end
@@ -24,34 +32,78 @@ defmodule Tank do
             y: 0,
             velocity: 0,
             direction: :right,
-            turretAngle: 0
+            turretAngle: 0.0
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, :ok, opts)
   end
 
-  def init(:ok) do
-    {:ok, %Tank{}}
+  @doc """
+  Get current state of a tank
+
+    ## Example
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.get_state(pid)
+    %Tank{}
+
+  """
+  def get_state(tankPid) do
+    GenServer.call(tankPid, :get_state)
   end
 
-  # Validate and set velocity
+  @doc """
+  Validate and set velocity
+
+    ## Example
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.set_velocity(pid, 10)
+    iex> Tank.get_state(pid)
+    %Tank{velocity: 5}
+
+  """
   @spec set_velocity(atom() | pid() | {atom(), any()} | {:via, atom(), any()}, any()) :: :ok
   def set_velocity(tankPid, velocity) do
     GenServer.cast(tankPid, {:set_velocity, velocity})
   end
 
-  # Move tank
+  @doc """
+  Evaluate the movement of a tank
+
+    ## Example
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.set_velocity(pid, 10)
+    iex> Tank.move(pid)
+    iex> Tank.get_state(pid)
+    %Tank{velocity: 5, x: 5}
+
+  """
   def move(tankPid) do
     GenServer.cast(tankPid, :move)
   end
 
-  # Get current state of tank
-  def get_state(tankPid) do
-    GenServer.call(tankPid, :get_state)
-  end
+  @doc """
+  Fire a bullet
 
+    ## Example
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.fire(pid)
+    %Bullet{x: 70, y: 14, velocity_x: 800, velocity_y: 0}
+
+  """
   def fire(tankPid) do
     GenServer.call(tankPid, :fire)
+  end
+
+  ##########
+  # SERVER #
+  ##########
+
+  def init(:ok) do
+    {:ok, %Tank{}}
   end
 
   def handle_cast({:set_velocity, velocity}, tank) do
