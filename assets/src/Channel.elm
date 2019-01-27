@@ -9,7 +9,6 @@ port module Channel exposing
     , responseToMsg
     )
 
-import Debug
 import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
@@ -57,7 +56,6 @@ responseToMsg response =
     if response.event == "sync" then
         Decode.decodeValue GameState.decoder response.payload
             |> Result.map Sync
-            |> Debug.log "me"
             |> Result.withDefault NoOp
 
     else

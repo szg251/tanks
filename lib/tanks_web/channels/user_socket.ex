@@ -17,10 +17,7 @@ defmodule TanksWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   def connect(params, socket) do
-    {:ok,
-     socket
-     |> assign(:user_id, params["user_id"])
-     |> assign(:game_state, GameState.get_state())}
+    {:ok, socket |> assign(:user_id, params["user_id"])}
   end
 
   # Socket id's are topics that allow you to identify all sockets for a given user:

@@ -163,11 +163,25 @@ defmodule GameState do
   def handle_cast({:fire, tankId}, state) do
     case Map.fetch(state.tanks, tankId) do
       {:ok, tankPid} ->
-        newState = %GameState{state | bullets: [Tank.fire(tankPid) | state.bullets]}
-        {:noreply, newState}
+        case Tank.fire(tankPid) do
+          {:ok, bullet} -> {:noreply, %GameState{state | bullets: [bullet | state.bullets]}}
+          :error -> {:noreply, state}
+        end
 
       :error ->
         {:noreply, state}
     end
+
+    # with {:ok, tankPid} <- Map.fetch(state.tanks, tankId),
+    #      {:ok, bullet} <- Tank.fire(tankPid) do
+    #   {:noreply, %GameState{state | bullets: [bullet | state.bullets]}}
+    # end
+  end
+
+  def to_api(%{tanks: tanks, bullets: bullets}) do
+    %{
+      tanks: tanks |> Enum.map(&Tank.to_api(&1)),
+      bullets: bullets |> Enum.map(&Bullet.to_api(&1))
+    }
   end
 end
