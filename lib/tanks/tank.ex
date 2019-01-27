@@ -37,10 +37,10 @@ defmodule Tank do
 
   @derive {Jason.Encoder, only: [:health, :x, :y, :turret_angle, :load, :direction]}
   defstruct health: 100,
-            width: 50,
-            height: 20,
+            width: 60,
+            height: 40,
             x: 0,
-            y: 550,
+            y: 560,
             load: 100,
             velocity_x: 0,
             velocity_y: 0,
@@ -48,13 +48,11 @@ defmodule Tank do
             turret_angle: 0.0,
             turret_angle_velocity: 0.0
 
-  def to_api(%Tank{x: x, y: y, direction: direction, load: load, turret_angle: turret_angle}) do
+  def to_api(tank) do
     %Tank{
-      x: round(x),
-      y: round(y),
-      direction: direction,
-      load: load,
-      turret_angle: turret_angle
+      tank
+      | x: round(tank.x),
+        y: round(tank.y)
     }
   end
 
@@ -143,6 +141,18 @@ defmodule Tank do
     GenServer.call(tankPid, :fire)
   end
 
+  @doc """
+  Injure hits
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.injure(pid, 10)
+    iex> Tank.get_state(pid)
+    %Tank{health: 90}
+  """
+  def injure(tankPid, healthPenalty) do
+    GenServer.cast(tankPid, {:injure, healthPenalty})
+  end
+
   ##########
   # SERVER #
   ##########
@@ -184,6 +194,10 @@ defmodule Tank do
       |> max(-@max_turret_angle_velocity)
 
     {:noreply, %Tank{tank | turret_angle_velocity: newAngle}}
+  end
+
+  def handle_cast({:injure, healthPenalty}, tank) do
+    {:noreply, %Tank{tank | health: tank.health - healthPenalty}}
   end
 
   def handle_call(:get_state, _from, tank) do

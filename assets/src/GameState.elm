@@ -3,8 +3,9 @@ module GameState exposing
     , GameState
     , Tank
     , decoder
-    , view
     , viewBullet
+    , viewField
+    , viewTank
     )
 
 import Json.Decode as Decode exposing (Decoder)
@@ -172,8 +173,8 @@ lifeIndicator direction life =
         []
 
 
-view : Tank -> Svg msg
-view tank =
+viewTank : Tank -> Svg msg
+viewTank tank =
     svg
         [ x <| String.fromInt tank.x
         , y <| String.fromInt tank.y
@@ -193,6 +194,18 @@ view tank =
         , track { x = 51, y = 40 } { x = 61, y = 35 }
         , track { x = 20, y = 40 } { x = 50, y = 40 }
         ]
+
+
+viewField : Svg msg
+viewField =
+    line
+        [ x1 "0"
+        , y1 "600"
+        , x2 "1000"
+        , y2 "600"
+        , stroke "black"
+        ]
+        []
 
 
 

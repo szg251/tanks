@@ -106,7 +106,9 @@ defmodule GameState do
 
   # Evaluate movement
   def handle_info(:tick, state) do
-    state.tanks |> Map.values() |> Enum.map(&Tank.eval(&1))
+    tankPids = state.tanks |> Map.values()
+
+    tankPids |> Enum.map(&Tank.eval(&1))
 
     bullets =
       state.bullets
@@ -117,8 +119,10 @@ defmodule GameState do
         end
       end)
 
+    remaining_bullets = GameState.get_hits(tankPids, bullets)
+
     schedule_tick()
-    {:noreply, %GameState{state | bullets: bullets}}
+    {:noreply, %GameState{state | bullets: remaining_bullets}}
   end
 
   # Create a new tank
@@ -183,5 +187,22 @@ defmodule GameState do
       tanks: tanks |> Enum.map(&Tank.to_api(&1)),
       bullets: bullets |> Enum.map(&Bullet.to_api(&1))
     }
+  end
+
+  def get_hits(tankPids, bullets) do
+    hit_bullets =
+      for tankPid <- tankPids, bullet <- bullets do
+        tank = Tank.get_state(tankPid)
+
+        if Field.colliding?(tank, bullet) do
+          Tank.injure(tankPid, 20)
+          bullet
+        end
+      end
+
+    bullets
+    |> Enum.filter(fn bullet ->
+      Enum.all?(hit_bullets, fn hit_bullet -> hit_bullet != bullet end)
+    end)
   end
 end

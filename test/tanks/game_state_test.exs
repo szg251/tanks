@@ -29,4 +29,23 @@ defmodule GameStateTest do
     new_bullets = GameState.get_state().bullets
     assert length(new_bullets) == 0
   end
+
+  test "Evaluate hits" do
+    {:ok, tankPid} = GameState.create_tank("test")
+    tanks = [tankPid]
+
+    bullets = [
+      %Bullet{width: 3, height: 3, x: 10, y: 550, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 15, y: 550, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 10, y: 450, velocity_x: 0, velocity_y: 0}
+    ]
+
+    remained_bullets = GameState.get_hits(tanks, bullets)
+
+    assert length(remained_bullets) == 1
+
+    hit_tank = Tank.get_state(tankPid)
+
+    assert hit_tank == %Tank{health: 80}
+  end
 end

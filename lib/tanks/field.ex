@@ -47,19 +47,23 @@ defmodule Field do
     # Examples
 
     iex> Field.colliding?(
-    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
-    ...> [{10, 10}, {20, 10}, {20, 20}, {10, 20}])
+    ...> %{width: 10, height: 10, x: 0, y: 0},
+    ...> %{width: 10, height: 10, x: 10, y: 10})
     true
 
     iex> Field.colliding?(
-    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
-    ...> [{20, 20}, {30, 20}, {30, 30}, {20, 30}])
+    ...> %{width: 10, height: 10, x: 0, y: 0},
+    ...> %{width: 10, height: 10, x: 20, y: 20})
     false
 
   """
   def colliding?(object1, object2) do
-    shape1 = Collidex.Geometry.Polygon.make(object1)
-    shape2 = Collidex.Geometry.Polygon.make(object2)
+    to_rect_args = fn object ->
+      {object.x, object.y, object.x + object.width, object.y + object.height}
+    end
+
+    shape1 = object1 |> to_rect_args.() |> Collidex.Geometry.Rect.make()
+    shape2 = object2 |> to_rect_args.() |> Collidex.Geometry.Rect.make()
 
     case Collidex.Detector.collision?(shape1, shape2) do
       {:collision, _} -> true

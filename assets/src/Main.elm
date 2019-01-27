@@ -55,7 +55,8 @@ view model =
             , width <| String.fromInt (model.window.width - 10)
             , height <| String.fromInt (model.window.height - 10)
             ]
-            (List.map GameState.view model.gameState.tanks
+            (GameState.viewField
+                :: List.map GameState.viewTank model.gameState.tanks
                 ++ List.map GameState.viewBullet model.gameState.bullets
             )
         ]
