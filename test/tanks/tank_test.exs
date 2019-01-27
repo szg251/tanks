@@ -11,6 +11,7 @@ defmodule TankTest do
     Tank.eval(pid)
     bullet2 = Tank.fire(pid)
 
-    assert bullet1 !== bullet2
+    assert bullet1.y !== bullet2.y
+    assert bullet1.velocity_y !== bullet2.velocity_y
   end
 end

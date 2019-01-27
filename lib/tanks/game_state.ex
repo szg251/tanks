@@ -162,7 +162,7 @@ defmodule GameState do
     iex> GameState.create_tank("test")
     iex> GameState.fire("test")
     iex> GameState.get_bullets()
-    [%Bullet{x: 70, y: 14, velocity_x: 8, velocity_y: 0}]
+    [%Bullet{x: 70, y: 564, velocity_x: 8, velocity_y: 0}]
 
   """
   def fire(tankId) do
