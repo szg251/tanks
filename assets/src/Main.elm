@@ -34,10 +34,14 @@ type alias Model =
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+type alias Flags =
+    { window : { width : Int, height : Int } }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init { window } =
     ( { gameState = { tanks = [], bullets = [] }
-      , window = { width = 1000, height = 600 }
+      , window = window
       }
     , Channel.join "game:lobby"
     )
@@ -151,7 +155,7 @@ keyDecoder toMsg =
         |> Decode.map toMsg
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init

@@ -21,7 +21,8 @@ import socket from "./socket"
 import { Elm } from "../src/Main.elm"
 
 const app = Elm.Main.init({
-  node: document.getElementById("elm-node")
+  node: document.getElementById("elm-node"),
+  flags: { window: { width: window.innerWidth, height: window.innerHeight } }
 })
 
 app.ports.join.subscribe(topic => {
