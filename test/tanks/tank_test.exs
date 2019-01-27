@@ -7,8 +7,8 @@ defmodule TankTest do
     {:ok, pid} = Tank.start_link([])
     bullet1 = Tank.fire(pid)
 
-    Tank.set_turret_angle_velocity(pid, 0.1)
-    Tank.eval(pid)
+    Tank.set_turret_angle_velocity(pid, 0.04)
+    for n <- 0..10, do: Tank.eval(pid)
     bullet2 = Tank.fire(pid)
 
     assert bullet1.y !== bullet2.y

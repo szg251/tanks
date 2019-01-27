@@ -26,8 +26,9 @@ defmodule Tank do
   use GenServer
 
   @max_velocity 5
-  @max_turret_angle_velocity 0.1
-  @max_turret_angle 1
+  @max_turret_angle_velocity 0.03
+  @max_turret_angle 0.5
+  @min_turret_angle -0.2
   @bullet_velocity 8
 
   @derive {Jason.Encoder, only: [:health, :x, :y, :turret_angle, :load, :direction]}
@@ -88,7 +89,7 @@ defmodule Tank do
     iex> {:ok, pid} = Tank.start_link([])
     iex> Tank.set_turret_angle_velocity(pid, -0.7)
     iex> Tank.get_state(pid)
-    %Tank{turret_angle_velocity: -0.1}
+    %Tank{turret_angle_velocity: -0.03}
 
   """
   def set_turret_angle_velocity(tankPid, angle) do
@@ -102,10 +103,10 @@ defmodule Tank do
 
     iex> {:ok, pid} = Tank.start_link([])
     iex> Tank.set_velocity(pid, 10)
-    iex> Tank.set_turret_angle_velocity(pid, 0.1)
+    iex> Tank.set_turret_angle_velocity(pid, 0.03)
     iex> Tank.eval(pid)
     iex> Tank.get_state(pid)
-    %Tank{velocity: 5, turret_angle_velocity: 0.1, x: 5, turret_angle: 0.1}
+    %Tank{velocity: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03}
 
   """
   def eval(tankPid) do
@@ -194,8 +195,8 @@ defmodule Tank do
       tank
       | turret_angle:
           (tank.turret_angle + tank.turret_angle_velocity)
-          |> max(-@max_turret_angle)
           |> min(@max_turret_angle)
+          |> max(@min_turret_angle)
     }
   end
 end

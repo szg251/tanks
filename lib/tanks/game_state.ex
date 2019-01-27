@@ -136,8 +136,8 @@ defmodule GameState do
   def handle_call({:remove_tank, tankId}, _from, state) do
     if Map.has_key?(state.tanks, tankId) do
       pid = Map.fetch!(state.tanks, tankId)
-      Process.exit(pid, "Removed")
       tanks = Map.delete(state.tanks, tankId)
+      Process.exit(pid, "Removed")
       {:reply, :ok, %GameState{state | tanks: tanks}}
     else
       {:reply, :error, state}
