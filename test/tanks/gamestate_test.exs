@@ -14,4 +14,19 @@ defmodule GameStateTest do
 
     assert !Process.alive?(pid)
   end
+
+  test "Bullet out of field" do
+    {:ok, pid} = GameState.create_tank("test")
+    GameState.fire("test")
+
+    bullets = GameState.get_bullets()
+    assert length(bullets) == 1
+
+    for n <- 0..115 do
+      Process.send(GameState, :tick, [])
+    end
+
+    new_bullets = GameState.get_bullets()
+    assert length(new_bullets) == 0
+  end
 end

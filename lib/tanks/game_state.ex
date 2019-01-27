@@ -1,6 +1,7 @@
 defmodule Field do
   @field_width 1000
   @field_height 600
+  @gravity 5
 
   @doc """
   Moving an object on the field
@@ -15,9 +16,18 @@ defmodule Field do
     {:ok, 5, 15}
 
   """
-  def move_object(object_width, object_x, velocity_x, object_height, object_y, velocity_y \\ 0) do
+  def move_object(
+        object_width,
+        object_x,
+        velocity_x,
+        object_height,
+        object_y,
+        velocity_y \\ 0,
+        gravity \\ false
+      ) do
     newX = object_x + velocity_x
-    newY = object_y + velocity_y
+
+    newY = if gravity, do: object_y + velocity_y + @gravity, else: object_y + velocity_y
 
     cond do
       newX < 0 or newX > @field_width - object_width -> :error
@@ -152,7 +162,7 @@ defmodule GameState do
     iex> GameState.create_tank("test")
     iex> GameState.fire("test")
     iex> GameState.get_bullets()
-    [%Bullet{x: 70, y: 14, velocity_x: 800, velocity_y: 0}]
+    [%Bullet{x: 70, y: 14, velocity_x: 8, velocity_y: 0}]
 
   """
   def fire(tankId) do

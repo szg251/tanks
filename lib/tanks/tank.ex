@@ -7,11 +7,12 @@ defmodule Bullet do
 
     iex> bullet = %Bullet{x: 50, y: 50, velocity_x: 5, velocity_y: -5}
     iex> Bullet.move(bullet)
-    {:ok, %Bullet{x: 55, y: 45, velocity_x: 5, velocity_y: -5}}
+    {:ok, %Bullet{x: 55, y: 50, velocity_x: 5, velocity_y: -5}}
 
   """
   def move(bullet) do
-    movement = Field.move_object(3, bullet.x, bullet.velocity_x, 3, bullet.y, bullet.velocity_y)
+    movement =
+      Field.move_object(3, bullet.x, bullet.velocity_x, 3, bullet.y, bullet.velocity_y, true)
 
     case movement do
       {:ok, newX, newY} -> {:ok, %Bullet{bullet | x: newX, y: newY}}
@@ -26,6 +27,7 @@ defmodule Tank do
   @max_velocity 5
   @max_turret_angle_velocity 0.1
   @max_turret_angle 1
+  @bullet_velocity 8
 
   defstruct health: 100,
             width: 50,
@@ -114,7 +116,7 @@ defmodule Tank do
 
     iex> {:ok, pid} = Tank.start_link([])
     iex> Tank.fire(pid)
-    %Bullet{x: 70, y: 14, velocity_x: 800, velocity_y: 0}
+    %Bullet{x: 70, y: 14, velocity_x: 8, velocity_y: 0}
 
   """
   def fire(tankPid) do
@@ -168,16 +170,16 @@ defmodule Tank do
           %Bullet{
             x: tank.x + 20 - round(20 * :math.cos(tank.turret_angle)),
             y: tank.y + 14 - round(20 * :math.sin(tank.turret_angle)),
-            velocity_x: round(-800 * :math.cos(tank.turret_angle)),
-            velocity_y: round(-800 * :math.sin(tank.turret_angle))
+            velocity_x: round(-@bullet_velocity * :math.cos(tank.turret_angle)),
+            velocity_y: round(-@bullet_velocity * :math.sin(tank.turret_angle))
           }
 
         :right ->
           %Bullet{
             x: tank.x + 50 + round(20 * :math.cos(tank.turret_angle)),
             y: tank.y + 14 - round(20 * :math.sin(tank.turret_angle)),
-            velocity_x: round(800 * :math.cos(tank.turret_angle)),
-            velocity_y: round(-800 * :math.sin(tank.turret_angle))
+            velocity_x: round(@bullet_velocity * :math.cos(tank.turret_angle)),
+            velocity_y: round(-@bullet_velocity * :math.sin(tank.turret_angle))
           }
       end
 
