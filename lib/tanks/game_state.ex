@@ -6,7 +6,7 @@ defmodule Field do
   Moving an object on the field
   results in :error if out of boundaries
 
-    #Examples
+    # Examples
 
     iex> Field.move_object(10, 0, -5, 10, 0)
     :error
@@ -23,6 +23,32 @@ defmodule Field do
       newX < 0 or newX > @field_width - object_width -> :error
       newY < 0 or newY > @field_height - object_height -> :error
       true -> {:ok, newX, newY}
+    end
+  end
+
+  @doc """
+  Detects whether two objects are colliding
+
+    # Examples
+
+    iex> Field.colliding?(
+    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
+    ...> [{10, 10}, {20, 10}, {20, 20}, {10, 20}])
+    true
+
+    iex> Field.colliding?(
+    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
+    ...> [{20, 20}, {30, 20}, {30, 30}, {20, 30}])
+    false
+
+  """
+  def colliding?(object1, object2) do
+    shape1 = Collidex.Geometry.Polygon.make(object1)
+    shape2 = Collidex.Geometry.Polygon.make(object2)
+
+    case Collidex.Detector.collision?(shape1, shape2) do
+      {:collision, _} -> true
+      _ -> false
     end
   end
 end
