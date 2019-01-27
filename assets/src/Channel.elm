@@ -10,9 +10,9 @@ port module Channel exposing
     )
 
 import Debug
+import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
-import Tank exposing (Tank)
 
 
 port join : String -> Cmd msg
@@ -34,7 +34,7 @@ port push : Push -> Cmd msg
 
 type Msg
     = NoOp
-    | UpdateTanks (List Tank)
+    | Sync GameState
 
 
 moveTank : Int -> Cmd msg
@@ -55,14 +55,10 @@ fire =
 responseToMsg : Response -> Msg
 responseToMsg response =
     if response.event == "sync" then
-        Decode.decodeValue gameStateDecoder response.payload
-            |> Result.map UpdateTanks
+        Decode.decodeValue GameState.decoder response.payload
+            |> Result.map Sync
+            |> Debug.log "me"
             |> Result.withDefault NoOp
 
     else
         NoOp
-
-
-gameStateDecoder : Decoder (List Tank)
-gameStateDecoder =
-    Decode.field "tanks" (Decode.list Tank.decoder)

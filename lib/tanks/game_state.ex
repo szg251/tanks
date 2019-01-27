@@ -1,72 +1,7 @@
-defmodule Field do
-  @field_width 1000
-  @field_height 600
-  @gravity 5
-
-  @doc """
-  Moving an object on the field
-  results in :error if out of boundaries
-
-    # Examples
-
-    iex> Field.move_object(10, 0, -5, 10, 0)
-    :error
-
-    iex> Field.move_object(10, 10, -5, 10, 10, 5)
-    {:ok, 5, 15}
-
-  """
-  def move_object(
-        object_width,
-        object_x,
-        velocity_x,
-        object_height,
-        object_y,
-        velocity_y \\ 0,
-        gravity \\ false
-      ) do
-    newX = object_x + velocity_x
-
-    newY = if gravity, do: object_y + velocity_y + @gravity, else: object_y + velocity_y
-
-    cond do
-      newX < 0 or newX > @field_width - object_width -> :error
-      newY < 0 or newY > @field_height - object_height -> :error
-      true -> {:ok, newX, newY}
-    end
-  end
-
-  @doc """
-  Detects whether two objects are colliding
-
-    # Examples
-
-    iex> Field.colliding?(
-    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
-    ...> [{10, 10}, {20, 10}, {20, 20}, {10, 20}])
-    true
-
-    iex> Field.colliding?(
-    ...> [{0, 0}, {10, 0}, {10, 10}, {0, 10}],
-    ...> [{20, 20}, {30, 20}, {30, 30}, {20, 30}])
-    false
-
-  """
-  def colliding?(object1, object2) do
-    shape1 = Collidex.Geometry.Polygon.make(object1)
-    shape2 = Collidex.Geometry.Polygon.make(object2)
-
-    case Collidex.Detector.collision?(shape1, shape2) do
-      {:collision, _} -> true
-      _ -> false
-    end
-  end
-end
-
 defmodule GameState do
   use GenServer
 
-  @tick_rate 100
+  @tick_rate 30
 
   defstruct tanks: Map.new(),
             bullets: []
@@ -111,16 +46,16 @@ defmodule GameState do
 
   ## Example
 
-      iex> GameState.get_tanks()
-      []
+      iex> GameState.get_state()
+      %{tanks: [], bullets: []}
 
       iex> GameState.create_tank("test")
-      iex> GameState.get_tanks()
-      [%Tank{}]
+      iex> GameState.get_state()
+      %{tanks: [%Tank{}], bullets: []}
 
   """
-  def get_tanks do
-    GenServer.call(__MODULE__, :get_tanks)
+  def get_state do
+    GenServer.call(__MODULE__, :get_state)
   end
 
   @doc """
@@ -142,26 +77,13 @@ defmodule GameState do
   end
 
   @doc """
-  Get all bullets
-
-    ## Example
-
-    iex> GameState.get_bullets()
-    []
-
-  """
-  def get_bullets do
-    GenServer.call(__MODULE__, :get_bullets)
-  end
-
-  @doc """
   Fires a bullet from the specified tank
 
     ## Example
 
     iex> GameState.create_tank("test")
     iex> GameState.fire("test")
-    iex> GameState.get_bullets()
+    iex> GameState.get_state().bullets
     [%Bullet{x: 70, y: 564, velocity_x: 8, velocity_y: 0}]
 
   """
@@ -223,23 +145,18 @@ defmodule GameState do
   end
 
   # Get all tanks
-  def handle_call(:get_tanks, _from, state) do
+  def handle_call(:get_state, _from, state) do
     tanks =
       state.tanks
       |> Map.values()
       |> Enum.map(&Tank.get_state(&1))
 
-    {:reply, tanks, state}
+    {:reply, %{tanks: tanks, bullets: state.bullets}, state}
   end
 
   # Get tank PID
   def handle_call({:get_pid, tankId}, _from, state) do
     {:reply, state.tanks |> Map.fetch(tankId), state}
-  end
-
-  # Get all bullets
-  def handle_call(:get_bullets, _from, state) do
-    {:reply, state.bullets, state}
   end
 
   # Fire a bullet

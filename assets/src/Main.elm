@@ -3,34 +3,40 @@ module Main exposing (Model, Msg(..))
 import Browser
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
 import Channel
+import GameState exposing (Bullet, GameState, Tank)
 import Html exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Set exposing (Set)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
-import Tank exposing (Bullet, Tank)
 import Time exposing (Posix, every)
 
 
 type Msg
     = NoOp
     | ResizeWindow Int Int
-    | KeyUp String
-    | KeyDown String
+    | KeyUp Key
+    | KeyDown Key
     | ChannelMsg Channel.Msg
 
 
+type Key
+    = ArrowRight
+    | ArrowLeft
+    | ArrowUp
+    | ArrowDown
+    | SpaceBar
+
+
 type alias Model =
-    { activeKeys : Set String
-    , tanks : List Tank
+    { gameState : GameState
     , window : { width : Int, height : Int }
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { activeKeys = Set.empty
-      , tanks = []
+    ( { gameState = { tanks = [], bullets = [] }
       , window = { width = 1000, height = 600 }
       }
     , Channel.join "game:lobby"
@@ -45,10 +51,8 @@ view model =
             , width <| String.fromInt (model.window.width - 10)
             , height <| String.fromInt (model.window.height - 10)
             ]
-            (List.map Tank.view model.tanks
-                ++ (List.map (.bullets >> List.map Tank.viewBullet) model.tanks
-                        |> List.concat
-                   )
+            (List.map GameState.view model.gameState.tanks
+                ++ List.map GameState.viewBullet model.gameState.bullets
             )
         ]
 
@@ -60,21 +64,41 @@ update msg model =
             ( model, Cmd.none )
 
         KeyDown key ->
-            let
-                activeKeys =
-                    Set.insert key model.activeKeys
-            in
-            ( { model | activeKeys = activeKeys }
-            , evalKeys activeKeys model
+            ( model
+            , case key of
+                ArrowRight ->
+                    Channel.moveTank 1
+
+                ArrowLeft ->
+                    Channel.moveTank -1
+
+                ArrowUp ->
+                    Channel.moveTurret 0.1
+
+                ArrowDown ->
+                    Channel.moveTurret -0.1
+
+                SpaceBar ->
+                    Channel.fire
             )
 
         KeyUp key ->
-            let
-                activeKeys =
-                    Set.remove key model.activeKeys
-            in
-            ( { model | activeKeys = activeKeys }
-            , evalKeys activeKeys model
+            ( model
+            , case key of
+                ArrowRight ->
+                    Channel.moveTank 0
+
+                ArrowLeft ->
+                    Channel.moveTank 0
+
+                ArrowUp ->
+                    Channel.moveTurret 0
+
+                ArrowDown ->
+                    Channel.moveTurret 0
+
+                SpaceBar ->
+                    Cmd.none
             )
 
         ResizeWindow w h ->
@@ -85,41 +109,8 @@ update msg model =
                 Channel.NoOp ->
                     ( model, Cmd.none )
 
-                Channel.UpdateTanks tanks ->
-                    ( { model | tanks = tanks }, Cmd.none )
-
-
-evalKeys : Set String -> Model -> Cmd Msg
-evalKeys activeKeys model =
-    let
-        evalMove =
-            if Set.member "ArrowRight" activeKeys then
-                Channel.moveTank 1
-
-            else if Set.member "ArrowLeft" activeKeys then
-                Channel.moveTank -1
-
-            else
-                Channel.moveTank 0
-
-        evalMoveTurret =
-            if Set.member "ArrowUp" activeKeys then
-                Channel.moveTurret 0.01
-
-            else if Set.member "ArrowDown" activeKeys then
-                Channel.moveTurret -0.01
-
-            else
-                Channel.moveTurret 0
-
-        evalFire =
-            if Set.member " " activeKeys then
-                Channel.fire
-
-            else
-                Cmd.none
-    in
-    Cmd.batch [ evalMove, evalMoveTurret, evalFire ]
+                Channel.Sync gameState ->
+                    ( { model | gameState = gameState }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -132,9 +123,31 @@ subscriptions model =
         ]
 
 
-keyDecoder : (String -> Msg) -> Decoder Msg
+keyDecoder : (Key -> Msg) -> Decoder Msg
 keyDecoder toMsg =
+    let
+        toKey key =
+            case key of
+                "ArrowUp" ->
+                    Decode.succeed ArrowUp
+
+                "ArrowDown" ->
+                    Decode.succeed ArrowDown
+
+                "ArrowLeft" ->
+                    Decode.succeed ArrowLeft
+
+                "ArrowRight" ->
+                    Decode.succeed ArrowRight
+
+                " " ->
+                    Decode.succeed SpaceBar
+
+                _ ->
+                    Decode.fail "Not a controller key"
+    in
     Decode.field "key" Decode.string
+        |> Decode.andThen toKey
         |> Decode.map toMsg
 
 

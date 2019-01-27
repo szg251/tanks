@@ -29,10 +29,10 @@ module.exports = (env, options) => ({
         test: /\.elm$/,
         exclude: /elm-stuff/,
         use: {
-          loader: "elm-webpack-loader"
-          // options: {
-          //   debug: options.mode === "development"
-          // }
+          loader: "elm-webpack-loader",
+          options: {
+            debug: options.mode === "development"
+          }
         }
       },
       {

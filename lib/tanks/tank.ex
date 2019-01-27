@@ -1,5 +1,6 @@
 defmodule Bullet do
   @enforce_keys [:x, :y, :velocity_x, :velocity_y]
+  @derive {Jason.Encoder, onlyu: [:x, :y]}
   defstruct [:x, :y, :velocity_x, :velocity_y]
 
   @doc """
@@ -29,11 +30,13 @@ defmodule Tank do
   @max_turret_angle 1
   @bullet_velocity 8
 
+  @derive {Jason.Encoder, only: [:health, :x, :y, :turret_angle, :load, :direction]}
   defstruct health: 100,
             width: 50,
             height: 20,
             x: 0,
             y: 550,
+            load: 0,
             velocity: 0,
             direction: :right,
             turret_angle: 0.0,

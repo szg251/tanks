@@ -1,5 +1,6 @@
-module Tank exposing
+module GameState exposing
     ( Bullet
+    , GameState
     , Tank
     , decoder
     , view
@@ -11,12 +12,18 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 
+type alias GameState =
+    { tanks : List Tank
+    , bullets : List Bullet
+    }
+
+
 type alias Position =
     { x : Int, y : Int }
 
 
 type alias Bullet =
-    { x : Int, y : Int, velX : Int, velY : Int }
+    { x : Int, y : Int }
 
 
 type Direction
@@ -30,7 +37,6 @@ type alias Tank =
     , load : Int
     , turretAngle : Float
     , direction : Direction
-    , bullets : List Bullet
     , life : Int
     }
 
@@ -209,30 +215,29 @@ viewBullet p =
 -- Decoders
 
 
-decoder : Decoder Tank
+decoder : Decoder GameState
 decoder =
-    Decode.map7 Tank
+    Decode.map2 GameState
+        (Decode.field "tanks" (Decode.list tankDecoder))
+        (Decode.field "bullets" (Decode.list bulletDecoder))
+
+
+tankDecoder : Decoder Tank
+tankDecoder =
+    Decode.map6 Tank
         (Decode.field "x" Decode.int)
         (Decode.field "y" Decode.int)
         (Decode.field "load" Decode.int)
-        (Decode.field "turretAngle" Decode.float)
+        (Decode.field "turret_angle" Decode.float)
         (Decode.field "direction" directionDecoder)
-        (Decode.field "bullets" bulletsDecoder)
-        (Decode.field "life" Decode.int)
-
-
-bulletsDecoder : Decoder (List Bullet)
-bulletsDecoder =
-    Decode.list bulletDecoder
+        (Decode.field "health" Decode.int)
 
 
 bulletDecoder : Decoder Bullet
 bulletDecoder =
-    Decode.map4 Bullet
+    Decode.map2 Bullet
         (Decode.field "x" Decode.int)
         (Decode.field "y" Decode.int)
-        (Decode.field "vel_x" Decode.int)
-        (Decode.field "vel_y" Decode.int)
 
 
 directionDecoder : Decoder Direction

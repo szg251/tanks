@@ -19,14 +19,14 @@ defmodule GameStateTest do
     {:ok, pid} = GameState.create_tank("test")
     GameState.fire("test")
 
-    bullets = GameState.get_bullets()
+    bullets = GameState.get_state().bullets
     assert length(bullets) == 1
 
     for n <- 0..115 do
       Process.send(GameState, :tick, [])
     end
 
-    new_bullets = GameState.get_bullets()
+    new_bullets = GameState.get_state().bullets
     assert length(new_bullets) == 0
   end
 end
