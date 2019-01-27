@@ -24,6 +24,8 @@ defmodule Tank do
   use GenServer
 
   @max_velocity 5
+  @max_turret_angle_velocity 0.1
+  @max_turret_angle 1
 
   defstruct health: 100,
             width: 50,
@@ -32,7 +34,8 @@ defmodule Tank do
             y: 0,
             velocity: 0,
             direction: :right,
-            turretAngle: 0.0
+            turret_angle: 0.0,
+            turret_angle_velocity: 0.0
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, :ok, opts)
@@ -63,9 +66,28 @@ defmodule Tank do
     %Tank{velocity: 5}
 
   """
-  @spec set_velocity(atom() | pid() | {atom(), any()} | {:via, atom(), any()}, any()) :: :ok
   def set_velocity(tankPid, velocity) do
     GenServer.cast(tankPid, {:set_velocity, velocity})
+  end
+
+  @doc """
+  Validate and set turret angle
+
+    ## Examples
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.set_turret_angle_velocity(pid, 0.01)
+    iex> Tank.get_state(pid)
+    %Tank{turret_angle_velocity: 0.01}
+
+    iex> {:ok, pid} = Tank.start_link([])
+    iex> Tank.set_turret_angle_velocity(pid, -0.7)
+    iex> Tank.get_state(pid)
+    %Tank{turret_angle_velocity: -0.1}
+
+  """
+  def set_turret_angle_velocity(tankPid, angle) do
+    GenServer.cast(tankPid, {:set_turret_angle_velocity, angle})
   end
 
   @doc """
@@ -75,13 +97,14 @@ defmodule Tank do
 
     iex> {:ok, pid} = Tank.start_link([])
     iex> Tank.set_velocity(pid, 10)
-    iex> Tank.move(pid)
+    iex> Tank.set_turret_angle_velocity(pid, 0.1)
+    iex> Tank.eval(pid)
     iex> Tank.get_state(pid)
-    %Tank{velocity: 5, x: 5}
+    %Tank{velocity: 5, turret_angle_velocity: 0.1, x: 5, turret_angle: 0.1}
 
   """
-  def move(tankPid) do
-    GenServer.cast(tankPid, :move)
+  def eval(tankPid) do
+    GenServer.cast(tankPid, :eval)
   end
 
   @doc """
@@ -112,13 +135,26 @@ defmodule Tank do
     {:noreply, newTank}
   end
 
-  def handle_cast(:move, tank) do
+  def handle_cast(:eval, tank) do
     movement = Field.move_object(tank.width, tank.x, tank.velocity, tank.height, tank.y)
 
-    case movement do
-      {:ok, newX, newY} -> {:noreply, %Tank{tank | x: newX, y: newY}}
-      :error -> {:noreply, tank}
-    end
+    new_tank =
+      case movement do
+        {:ok, newX, newY} -> %Tank{tank | x: newX, y: newY}
+        :error -> tank
+      end
+      |> move_turret()
+
+    {:noreply, new_tank}
+  end
+
+  def handle_cast({:set_turret_angle_velocity, angle}, tank) do
+    newAngle =
+      angle
+      |> min(@max_turret_angle_velocity)
+      |> max(-@max_turret_angle_velocity)
+
+    {:noreply, %Tank{tank | turret_angle_velocity: newAngle}}
   end
 
   def handle_call(:get_state, _from, tank) do
@@ -130,21 +166,31 @@ defmodule Tank do
       case tank.direction do
         :left ->
           %Bullet{
-            x: tank.x + 20 - round(20 * :math.cos(tank.turretAngle)),
-            y: tank.y + 14 - round(20 * :math.sin(tank.turretAngle)),
-            velocity_x: round(-800 * :math.cos(tank.turretAngle)),
-            velocity_y: round(-800 * :math.sin(tank.turretAngle))
+            x: tank.x + 20 - round(20 * :math.cos(tank.turret_angle)),
+            y: tank.y + 14 - round(20 * :math.sin(tank.turret_angle)),
+            velocity_x: round(-800 * :math.cos(tank.turret_angle)),
+            velocity_y: round(-800 * :math.sin(tank.turret_angle))
           }
 
         :right ->
           %Bullet{
-            x: tank.x + 50 + round(20 * :math.cos(tank.turretAngle)),
-            y: tank.y + 14 - round(20 * :math.sin(tank.turretAngle)),
-            velocity_x: round(800 * :math.cos(tank.turretAngle)),
-            velocity_y: round(-800 * :math.sin(tank.turretAngle))
+            x: tank.x + 50 + round(20 * :math.cos(tank.turret_angle)),
+            y: tank.y + 14 - round(20 * :math.sin(tank.turret_angle)),
+            velocity_x: round(800 * :math.cos(tank.turret_angle)),
+            velocity_y: round(-800 * :math.sin(tank.turret_angle))
           }
       end
 
     {:reply, bullet, tank}
+  end
+
+  defp move_turret(tank) do
+    %Tank{
+      tank
+      | turret_angle:
+          (tank.turret_angle + tank.turret_angle_velocity)
+          |> max(-@max_turret_angle)
+          |> min(@max_turret_angle)
+    }
   end
 end

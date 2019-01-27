@@ -14,10 +14,4 @@ defmodule GameStateTest do
 
     assert !Process.alive?(pid)
   end
-
-  # test "Move tank (setting velocity)" do
-  #   Tank.set_velocity(pid, 2)
-
-  #   assert GameState.get_tanks() == [%{pid: pid, tank: %Tank{velocity: 2}}]
-  # end
 end

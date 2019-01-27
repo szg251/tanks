@@ -148,7 +148,7 @@ defmodule GameState do
 
   # Evaluate movement
   def handle_info(:tick, state) do
-    state.tanks |> Map.values() |> Enum.map(&Tank.move(&1))
+    state.tanks |> Map.values() |> Enum.map(&Tank.eval(&1))
 
     bullets =
       state.bullets
