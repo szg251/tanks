@@ -134,7 +134,7 @@ defmodule Tank do
 
     iex> {:ok, pid} = Tank.start_link([])
     iex> Tank.fire(pid)
-    {:ok, %Bullet{x: 70, y: 564, velocity_x: 8, velocity_y: 0}}
+    {:ok, %Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}}
 
   """
   def fire(tankPid) do

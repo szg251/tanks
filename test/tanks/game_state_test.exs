@@ -35,8 +35,8 @@ defmodule GameStateTest do
     tanks = [tankPid]
 
     bullets = [
-      %Bullet{width: 3, height: 3, x: 10, y: 550, velocity_x: 0, velocity_y: 0},
-      %Bullet{width: 3, height: 3, x: 15, y: 550, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 10, y: 560, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 15, y: 560, velocity_x: 0, velocity_y: 0},
       %Bullet{width: 3, height: 3, x: 10, y: 450, velocity_x: 0, velocity_y: 0}
     ]
 
@@ -46,6 +46,6 @@ defmodule GameStateTest do
 
     hit_tank = Tank.get_state(tankPid)
 
-    assert hit_tank == %Tank{health: 80}
+    assert hit_tank == %Tank{health: 60}
   end
 end
