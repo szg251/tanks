@@ -59,7 +59,7 @@ defmodule Tanks.GameLogic.Tank do
     iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
     iex> Tanks.GameLogic.Tank.set_movement(pid, -10)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{velocity_x: -5, direction: :left}
+    %Tanks.GameLogic.Tank{velocity_x: -5}
 
   """
   def set_movement(tankPid, velocity) do
@@ -126,8 +126,8 @@ defmodule Tanks.GameLogic.Tank do
     iex> Tanks.GameLogic.Tank.get_state(pid)
     %Tanks.GameLogic.Tank{health: 90}
   """
-  def injure(tankPid, healthPenalty) do
-    GenServer.cast(tankPid, {:injure, healthPenalty})
+  def injure(tankPid, health_penalty) do
+    GenServer.cast(tankPid, {:injure, health_penalty})
   end
 
   ##########
@@ -139,29 +139,27 @@ defmodule Tanks.GameLogic.Tank do
   end
 
   def handle_cast({:set_movement, velocity}, tank) do
-    direction =
-      cond do
-        velocity < 0 -> :left
-        velocity > 0 -> :right
-        velocity == 0 -> tank.direction
-      end
-
     velocity_x = velocity |> min(@max_velocity) |> max(-@max_velocity)
-    newTank = %Tank{tank | velocity_x: velocity_x, direction: direction}
+    newTank = %Tank{tank | velocity_x: velocity_x}
 
     {:noreply, newTank}
   end
 
   def handle_cast(:eval, tank) do
-    new_tank =
-      case Field.move_object(tank) do
-        {:ok, moved_tank} -> moved_tank
-        :error -> tank
-      end
-      |> move_turret()
-      |> load_bullet()
+    if tank.health > 0 do
+      new_tank =
+        case Field.move_object(tank) do
+          {:ok, moved_tank} -> moved_tank
+          :error -> tank
+        end
+        |> switch_direction()
+        |> move_turret()
+        |> load_bullet()
 
-    {:noreply, new_tank}
+      {:noreply, new_tank}
+    else
+      {:noreply, tank}
+    end
   end
 
   def handle_cast({:set_turret_angle_velocity, angle}, tank) do
@@ -173,8 +171,8 @@ defmodule Tanks.GameLogic.Tank do
     {:noreply, %Tank{tank | turret_angle_velocity: newAngle}}
   end
 
-  def handle_cast({:injure, healthPenalty}, tank) do
-    {:noreply, %Tank{tank | health: tank.health - healthPenalty}}
+  def handle_cast({:injure, health_penalty}, tank) do
+    {:noreply, %Tank{tank | health: (tank.health - health_penalty) |> max(0)}}
   end
 
   def handle_call(:get_state, _from, tank) do
@@ -182,7 +180,7 @@ defmodule Tanks.GameLogic.Tank do
   end
 
   def handle_call(:fire, _from, tank) do
-    if tank.load != 100 do
+    if tank.load < 100 or tank.health <= 0 do
       {:reply, :error, tank}
     else
       bullet =
@@ -222,6 +220,18 @@ defmodule Tanks.GameLogic.Tank do
     %Tank{
       tank
       | load: (tank.load + @loading_speed) |> min(100)
+    }
+  end
+
+  defp switch_direction(tank) do
+    %Tank{
+      tank
+      | direction:
+          cond do
+            tank.velocity_x < 0 -> :left
+            tank.velocity_x > 0 -> :right
+            tank.velocity_x == 0 -> tank.direction
+          end
     }
   end
 end

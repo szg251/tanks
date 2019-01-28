@@ -23,6 +23,13 @@ defmodule TankTest do
     assert bullet == :error
   end
 
+  test "Cannot fire when dead" do
+    {:ok, pid} = Tank.start_link([])
+    Tank.injure(pid, 100)
+
+    assert Tank.fire(pid) == :error
+  end
+
   test "Firing from different turret angles" do
     {:ok, pid} = Tank.start_link([])
     {:ok, bullet1} = Tank.fire(pid)
