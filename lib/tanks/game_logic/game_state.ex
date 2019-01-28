@@ -24,8 +24,8 @@ defmodule Tanks.GameLogic.GameState do
       true
 
   """
-  def create_tank(tankId) do
-    GenServer.call(__MODULE__, {:create_tank, tankId})
+  def create_tank(tank_id) do
+    GenServer.call(__MODULE__, {:create_tank, tank_id})
   end
 
   @doc """
@@ -41,8 +41,8 @@ defmodule Tanks.GameLogic.GameState do
     :ok
 
   """
-  def remove_tank(tankId) do
-    GenServer.call(__MODULE__, {:remove_tank, tankId})
+  def remove_tank(tank_id) do
+    GenServer.call(__MODULE__, {:remove_tank, tank_id})
   end
 
   @doc """
@@ -76,8 +76,8 @@ defmodule Tanks.GameLogic.GameState do
     true
 
   """
-  def get_pid(tankId) do
-    GenServer.call(__MODULE__, {:get_pid, tankId})
+  def get_pid(tank_id) do
+    GenServer.call(__MODULE__, {:get_pid, tank_id})
   end
 
   @doc """
@@ -91,8 +91,8 @@ defmodule Tanks.GameLogic.GameState do
     [%Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}]
 
   """
-  def fire(tankId) do
-    GenServer.cast(__MODULE__, {:fire, tankId})
+  def fire(tank_id) do
+    GenServer.cast(__MODULE__, {:fire, tank_id})
   end
 
   defp schedule_tick() do
@@ -110,9 +110,9 @@ defmodule Tanks.GameLogic.GameState do
 
   # Evaluate movement
   def handle_info(:tick, state) do
-    tankPids = state.tanks |> Map.values()
+    tank_pids = state.tanks |> Map.values()
 
-    tankPids |> Enum.map(&Tank.eval(&1))
+    tank_pids |> Enum.map(&Tank.eval(&1))
 
     bullets =
       state.bullets
@@ -123,29 +123,46 @@ defmodule Tanks.GameLogic.GameState do
         end
       end)
 
-    remaining_bullets = GameState.get_hits(tankPids, bullets)
+    remaining_bullets = GameState.get_hits(tank_pids, bullets)
 
     schedule_tick()
     {:noreply, %GameState{state | bullets: remaining_bullets}}
   end
 
+  # Handle stopped processes
+  def handle_info({:DOWN, _ref, :process, old_pid, _reason}, state) do
+    tanks =
+      for {k, pid} <- state.tanks, into: %{} do
+        if pid == old_pid do
+          {:ok, new_pid} = Tanks.GameLogic.TankSupervisor.add_tank()
+          {k, new_pid}
+        else
+          {k, pid}
+        end
+      end
+
+    {:noreply, %GameState{tanks: tanks}}
+  end
+
   # Create a new tank
-  def handle_call({:create_tank, tankId}, _from, state) do
-    if !Map.has_key?(state.tanks, tankId) do
-      {:ok, tankPid} = Tank.start_link([])
-      newState = %GameState{state | tanks: state.tanks |> Map.put_new(tankId, tankPid)}
-      {:reply, {:ok, tankPid}, newState}
+  def handle_call({:create_tank, tank_id}, _from, state) do
+    if !Map.has_key?(state.tanks, tank_id) do
+      {:ok, tank_pid} = Tanks.GameLogic.TankSupervisor.add_tank()
+      Process.monitor(tank_pid)
+
+      newState = %GameState{state | tanks: state.tanks |> Map.put_new(tank_id, tank_pid)}
+      {:reply, {:ok, tank_pid}, newState}
     else
       {:reply, {:error, "Already existing"}, state}
     end
   end
 
   # Remove tank
-  def handle_call({:remove_tank, tankId}, _from, state) do
-    if Map.has_key?(state.tanks, tankId) do
-      pid = Map.fetch!(state.tanks, tankId)
-      tanks = Map.delete(state.tanks, tankId)
-      Process.exit(pid, "Removed")
+  def handle_call({:remove_tank, tank_id}, _from, state) do
+    if Map.has_key?(state.tanks, tank_id) do
+      tank_pid = Map.fetch!(state.tanks, tank_id)
+      tanks = Map.delete(state.tanks, tank_id)
+      Tanks.GameLogic.TankSupervisor.remove_tank(tank_pid)
       {:reply, :ok, %GameState{state | tanks: tanks}}
     else
       {:reply, :error, state}
@@ -163,15 +180,15 @@ defmodule Tanks.GameLogic.GameState do
   end
 
   # Get tank PID
-  def handle_call({:get_pid, tankId}, _from, state) do
-    {:reply, state.tanks |> Map.fetch(tankId), state}
+  def handle_call({:get_pid, tank_id}, _from, state) do
+    {:reply, state.tanks |> Map.fetch(tank_id), state}
   end
 
   # Fire a bullet
-  def handle_cast({:fire, tankId}, state) do
-    case Map.fetch(state.tanks, tankId) do
-      {:ok, tankPid} ->
-        case Tank.fire(tankPid) do
+  def handle_cast({:fire, tank_id}, state) do
+    case Map.fetch(state.tanks, tank_id) do
+      {:ok, tank_pid} ->
+        case Tank.fire(tank_pid) do
           {:ok, bullet} -> {:noreply, %GameState{state | bullets: [bullet | state.bullets]}}
           :error -> {:noreply, state}
         end
@@ -179,11 +196,6 @@ defmodule Tanks.GameLogic.GameState do
       :error ->
         {:noreply, state}
     end
-
-    # with {:ok, tankPid} <- Map.fetch(state.tanks, tankId),
-    #      {:ok, bullet} <- Tanks.GameLogic.Tank.fire(tankPid) do
-    #   {:noreply, %Tanks.GameLogic.GameState{state | bullets: [bullet | state.bullets]}}
-    # end
   end
 
   def to_api(%{tanks: tanks, bullets: bullets}) do
@@ -193,13 +205,13 @@ defmodule Tanks.GameLogic.GameState do
     }
   end
 
-  def get_hits(tankPids, bullets) do
+  def get_hits(tank_pids, bullets) do
     hit_bullets =
-      for tankPid <- tankPids, bullet <- bullets do
-        tank = Tank.get_state(tankPid)
+      for tank_pid <- tank_pids, bullet <- bullets do
+        tank = Tank.get_state(tank_pid)
 
         if Tanks.GameLogic.Field.colliding?(tank, bullet) do
-          Tank.injure(tankPid, 20)
+          Tank.injure(tank_pid, 20)
           bullet
         end
       end

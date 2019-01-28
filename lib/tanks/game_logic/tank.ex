@@ -1,5 +1,5 @@
 defmodule Tanks.GameLogic.Tank do
-  use GenServer
+  use GenServer, restart: :temporary
 
   alias Tanks.GameLogic.Tank
   alias Tanks.GameLogic.Bullet
