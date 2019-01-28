@@ -1,4 +1,4 @@
-defmodule Field do
+defmodule Tanks.GameLogic.Field do
   @field_width 1000
   @field_height 600
   @gravity 0.1
@@ -9,10 +9,10 @@ defmodule Field do
 
     # Examples
 
-    iex> Field.move_object(%{width: 10, x: 0, velocity_x: -5, height: 10, y: 0, velocity_y: 5})
+    iex> Tanks.GameLogic.Field.move_object(%{width: 10, x: 0, velocity_x: -5, height: 10, y: 0, velocity_y: 5})
     :error
 
-    iex> Field.move_object(%{width: 10, x: 10, velocity_x: -5, height: 10, y: 10, velocity_y: 5})
+    iex> Tanks.GameLogic.Field.move_object(%{width: 10, x: 10, velocity_x: -5, height: 10, y: 10, velocity_y: 5})
     {:ok, %{width: 10, x: 5, velocity_x: -5, height: 10, y: 15, velocity_y: 5}}
 
   """
@@ -33,7 +33,7 @@ defmodule Field do
 
     # Example
 
-    iex> Field.apply_gravity(%{velocity_y: 5})
+    iex> Tanks.GameLogic.Field.apply_gravity(%{velocity_y: 5})
     %{velocity_y: 5.1}
 
   """
@@ -46,12 +46,12 @@ defmodule Field do
 
     # Examples
 
-    iex> Field.colliding?(
+    iex> Tanks.GameLogic.Field.colliding?(
     ...> %{width: 10, height: 10, x: 0, y: 0},
     ...> %{width: 10, height: 10, x: 10, y: 10})
     true
 
-    iex> Field.colliding?(
+    iex> Tanks.GameLogic.Field.colliding?(
     ...> %{width: 10, height: 10, x: 0, y: 0},
     ...> %{width: 10, height: 10, x: 20, y: 20})
     false

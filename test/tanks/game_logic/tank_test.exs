@@ -1,7 +1,11 @@
 defmodule TankTest do
   use ExUnit.Case
-  doctest Tank
-  doctest Bullet
+
+  alias Tanks.GameLogic.Tank
+  alias Tanks.GameLogic.Bullet
+
+  doctest Tanks.GameLogic.Tank
+  doctest Tanks.GameLogic.Bullet
 
   test "Firing a bullet resets load counter" do
     {:ok, pid} = Tank.start_link([])

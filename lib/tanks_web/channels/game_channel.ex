@@ -1,5 +1,9 @@
 defmodule TanksWeb.GameChannel do
   use TanksWeb, :channel
+
+  alias Tanks.GameLogic.GameState
+  alias Tanks.GameLogic.Tank
+
   @tick_rate 30
 
   def join("game:lobby", _payload, socket) do

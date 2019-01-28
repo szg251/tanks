@@ -1,7 +1,12 @@
 defmodule GameStateTest do
   use ExUnit.Case
-  doctest GameState
-  doctest Field
+
+  alias Tanks.GameLogic.GameState
+  alias Tanks.GameLogic.Tank
+  alias Tanks.GameLogic.Bullet
+
+  doctest Tanks.GameLogic.GameState
+  doctest Tanks.GameLogic.Field
 
   setup do
     Application.stop(:tanks)

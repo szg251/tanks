@@ -1,32 +1,9 @@
-defmodule Bullet do
-  @enforce_keys [:x, :y, :velocity_x, :velocity_y]
-  @derive {Jason.Encoder, only: [:x, :y]}
-  defstruct width: 3, height: 3, x: 0, y: 0, velocity_x: 0, velocity_y: 0
-
-  @doc """
-  Evaluate the movement of a bullet
-
-    iex> bullet = %Bullet{x: 50, y: 50, velocity_x: 5, velocity_y: -5}
-    iex> Bullet.move(bullet)
-    {:ok, %Bullet{x: 55, y: 45.1, velocity_x: 5, velocity_y: -4.9}}
-
-  """
-  def move(bullet) do
-    bullet
-    |> Field.apply_gravity()
-    |> Field.move_object()
-  end
-
-  def to_api(%Bullet{x: x, y: y}) do
-    %{
-      x: round(x),
-      y: round(y)
-    }
-  end
-end
-
-defmodule Tank do
+defmodule Tanks.GameLogic.Tank do
   use GenServer
+
+  alias Tanks.GameLogic.Tank
+  alias Tanks.GameLogic.Bullet
+  alias Tanks.GameLogic.Field
 
   @max_velocity 5
   @max_turret_angle_velocity 0.03
@@ -65,9 +42,9 @@ defmodule Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.get_state(pid)
-    %Tank{}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{}
 
   """
   def get_state(tankPid) do
@@ -79,10 +56,10 @@ defmodule Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.set_movement(pid, -10)
-    iex> Tank.get_state(pid)
-    %Tank{velocity_x: -5, direction: :left}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.set_movement(pid, -10)
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{velocity_x: -5, direction: :left}
 
   """
   def set_movement(tankPid, velocity) do
@@ -94,15 +71,15 @@ defmodule Tank do
 
     ## Examples
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.set_turret_angle_velocity(pid, 0.01)
-    iex> Tank.get_state(pid)
-    %Tank{turret_angle_velocity: 0.01}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.01)
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{turret_angle_velocity: 0.01}
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.set_turret_angle_velocity(pid, -0.7)
-    iex> Tank.get_state(pid)
-    %Tank{turret_angle_velocity: -0.03}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, -0.7)
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{turret_angle_velocity: -0.03}
 
   """
   def set_turret_angle_velocity(tankPid, angle) do
@@ -114,13 +91,13 @@ defmodule Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.set_movement(pid, 10)
-    iex> Tank.set_turret_angle_velocity(pid, 0.03)
-    iex> Tank.fire(pid)
-    iex> Tank.eval(pid)
-    iex> Tank.get_state(pid)
-    %Tank{velocity_x: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03, load: 1}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.set_movement(pid, 10)
+    iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.03)
+    iex> Tanks.GameLogic.Tank.fire(pid)
+    iex> Tanks.GameLogic.Tank.eval(pid)
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{velocity_x: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03, load: 1}
 
   """
   def eval(tankPid) do
@@ -132,8 +109,8 @@ defmodule Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.fire(pid)
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.fire(pid)
     {:ok, %Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}}
 
   """
@@ -144,10 +121,10 @@ defmodule Tank do
   @doc """
   Injure hits
 
-    iex> {:ok, pid} = Tank.start_link([])
-    iex> Tank.injure(pid, 10)
-    iex> Tank.get_state(pid)
-    %Tank{health: 90}
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> Tanks.GameLogic.Tank.injure(pid, 10)
+    iex> Tanks.GameLogic.Tank.get_state(pid)
+    %Tanks.GameLogic.Tank{health: 90}
   """
   def injure(tankPid, healthPenalty) do
     GenServer.cast(tankPid, {:injure, healthPenalty})

@@ -1,5 +1,9 @@
-defmodule GameState do
+defmodule Tanks.GameLogic.GameState do
   use GenServer
+
+  alias Tanks.GameLogic.GameState
+  alias Tanks.GameLogic.Tank
+  alias Tanks.GameLogic.Bullet
 
   @tick_rate 30
 
@@ -15,7 +19,7 @@ defmodule GameState do
 
   ## Example
 
-      iex> {:ok, pid} = GameState.create_tank("test")
+      iex> {:ok, pid} = Tanks.GameLogic.GameState.create_tank("test")
       iex> is_pid(pid)
       true
 
@@ -29,11 +33,11 @@ defmodule GameState do
 
     ## Example
 
-    iex> GameState.remove_tank("test")
+    iex> Tanks.GameLogic.GameState.remove_tank("test")
     :error
 
-    iex> GameState.create_tank("test")
-    iex> GameState.remove_tank("test")
+    iex> Tanks.GameLogic.GameState.create_tank("test")
+    iex> Tanks.GameLogic.GameState.remove_tank("test")
     :ok
 
   """
@@ -46,12 +50,12 @@ defmodule GameState do
 
   ## Example
 
-      iex> GameState.get_state()
+      iex> Tanks.GameLogic.GameState.get_state()
       %{tanks: [], bullets: []}
 
-      iex> GameState.create_tank("test")
-      iex> GameState.get_state()
-      %{tanks: [%Tank{}], bullets: []}
+      iex> Tanks.GameLogic.GameState.create_tank("test")
+      iex> Tanks.GameLogic.GameState.get_state()
+      %{tanks: [%Tanks.GameLogic.Tank{}], bullets: []}
 
   """
   def get_state do
@@ -63,11 +67,11 @@ defmodule GameState do
 
     ## Examples
 
-    iex> GameState.get_pid("test")
+    iex> Tanks.GameLogic.GameState.get_pid("test")
     :error
 
-    iex> GameState.create_tank("test")
-    iex> {:ok, pid} = GameState.get_pid("test")
+    iex> Tanks.GameLogic.GameState.create_tank("test")
+    iex> {:ok, pid} = Tanks.GameLogic.GameState.get_pid("test")
     iex> is_pid(pid)
     true
 
@@ -81,9 +85,9 @@ defmodule GameState do
 
     ## Example
 
-    iex> GameState.create_tank("test")
-    iex> GameState.fire("test")
-    iex> GameState.get_state().bullets
+    iex> Tanks.GameLogic.GameState.create_tank("test")
+    iex> Tanks.GameLogic.GameState.fire("test")
+    iex> Tanks.GameLogic.GameState.get_state().bullets
     [%Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}]
 
   """
@@ -177,8 +181,8 @@ defmodule GameState do
     end
 
     # with {:ok, tankPid} <- Map.fetch(state.tanks, tankId),
-    #      {:ok, bullet} <- Tank.fire(tankPid) do
-    #   {:noreply, %GameState{state | bullets: [bullet | state.bullets]}}
+    #      {:ok, bullet} <- Tanks.GameLogic.Tank.fire(tankPid) do
+    #   {:noreply, %Tanks.GameLogic.GameState{state | bullets: [bullet | state.bullets]}}
     # end
   end
 
@@ -194,7 +198,7 @@ defmodule GameState do
       for tankPid <- tankPids, bullet <- bullets do
         tank = Tank.get_state(tankPid)
 
-        if Field.colliding?(tank, bullet) do
+        if Tanks.GameLogic.Field.colliding?(tank, bullet) do
           Tank.injure(tankPid, 20)
           bullet
         end
