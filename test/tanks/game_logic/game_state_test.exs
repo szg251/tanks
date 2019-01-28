@@ -53,4 +53,12 @@ defmodule GameStateTest do
 
     assert hit_tank == %Tank{health: 60}
   end
+
+  test "Tank process restarts when killed" do
+    {:ok, pid} = GameState.create_tank("test")
+
+    Process.exit(pid, :kill)
+    new_pid = GameState.get_pid("test")
+    assert pid != new_pid
+  end
 end
