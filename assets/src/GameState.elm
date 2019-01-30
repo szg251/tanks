@@ -38,7 +38,7 @@ type alias Tank =
     , load : Int
     , turretAngle : Float
     , direction : Direction
-    , life : Int
+    , health : Int
     }
 
 
@@ -151,16 +151,16 @@ loadIndicator direction load =
         []
 
 
-lifeIndicator : Direction -> Int -> Svg msg
-lifeIndicator direction life =
+healthIndicator : Direction -> Int -> Svg msg
+healthIndicator direction health =
     let
         ( p1, p2 ) =
             case direction of
                 Left ->
-                    ( Position (40 - life // 5) 14, Position 40 14 )
+                    ( Position (40 - health // 5) 14, Position 40 14 )
 
                 Right ->
-                    ( Position 30 14, Position (30 + life // 5) 14 )
+                    ( Position 30 14, Position (30 + health // 5) 14 )
     in
     line
         [ x1 <| String.fromInt p1.x
@@ -182,7 +182,7 @@ viewTank tank =
         [ body
         , turretBase tank.direction
         , loadIndicator tank.direction tank.load
-        , lifeIndicator tank.direction tank.life
+        , healthIndicator tank.direction tank.health
         , turret tank.direction tank.turretAngle
         , wheel { x = 10, y = 30 }
         , wheel { x = 20, y = 35 }
