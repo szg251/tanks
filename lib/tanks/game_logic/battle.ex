@@ -12,8 +12,8 @@ defmodule Tanks.GameLogic.Battle do
             tank_sup_pid: nil,
             bullets: []
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts)
+  def start_link(tank_sup_pid) when is_pid(tank_sup_pid) do
+    GenServer.start_link(__MODULE__, {:ok, tank_sup_pid}, [])
   end
 
   @doc """
@@ -21,10 +21,11 @@ defmodule Tanks.GameLogic.Battle do
 
   ## Example
 
-      iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
-      iex> {:ok, pid} = Tanks.GameLogic.Battle.create_tank(game_pid, "test")
-      iex> is_pid(pid)
-      true
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, pid} = Tanks.GameLogic.Battle.create_tank(game_pid, "test")
+    iex> is_pid(pid)
+    true
 
   """
   def create_tank(game_pid, tank_id) do
@@ -36,11 +37,13 @@ defmodule Tanks.GameLogic.Battle do
 
     ## Example
 
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
     iex> Tanks.GameLogic.Battle.remove_tank(game_pid, "test")
     :error
 
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.remove_tank(game_pid, "test")
     :ok
@@ -55,14 +58,16 @@ defmodule Tanks.GameLogic.Battle do
 
   ## Example
 
-      iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
-      iex> Tanks.GameLogic.Battle.get_state(game_pid)
-      %{tanks: [], bullets: []}
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> Tanks.GameLogic.Battle.get_state(game_pid)
+    %{tanks: [], bullets: []}
 
-      iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
-      iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
-      iex> Tanks.GameLogic.Battle.get_state(game_pid)
-      %{tanks: [%Tanks.GameLogic.Tank{}], bullets: []}
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
+    iex> Tanks.GameLogic.Battle.get_state(game_pid)
+    %{tanks: [%Tanks.GameLogic.Tank{}], bullets: []}
 
   """
   def get_state(game_pid) do
@@ -74,11 +79,13 @@ defmodule Tanks.GameLogic.Battle do
 
     ## Examples
 
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
     iex> Tanks.GameLogic.Battle.get_pid(game_pid, "test")
     :error
 
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> {:ok, pid} = Tanks.GameLogic.Battle.get_pid(game_pid, "test")
     iex> is_pid(pid)
@@ -94,7 +101,8 @@ defmodule Tanks.GameLogic.Battle do
 
     ## Example
 
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link([])
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.fire(game_pid, "test")
     iex> Tanks.GameLogic.Battle.get_state(game_pid).bullets
@@ -113,8 +121,7 @@ defmodule Tanks.GameLogic.Battle do
   # SERVER #
   ##########
 
-  def init(:ok) do
-    {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+  def init({:ok, tank_sup_pid}) when is_pid(tank_sup_pid) do
     schedule_tick()
     {:ok, %Battle{tank_sup_pid: tank_sup_pid}}
   end

@@ -2,6 +2,7 @@ defmodule BattleTest do
   use ExUnit.Case
 
   alias Tanks.GameLogic.Battle
+  alias Tanks.GameLogic.TankSupervisor
   alias Tanks.GameLogic.Tank
   alias Tanks.GameLogic.Bullet
 
@@ -14,7 +15,8 @@ defmodule BattleTest do
   end
 
   test "Removing a tank also stops its process" do
-    {:ok, game_pid} = Battle.start_link([])
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
     {:ok, pid} = Battle.create_tank(game_pid, "test")
     Battle.remove_tank(game_pid, "test")
 
@@ -22,7 +24,8 @@ defmodule BattleTest do
   end
 
   test "Bullet out of field" do
-    {:ok, game_pid} = Battle.start_link([])
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
     Battle.create_tank(game_pid, "test")
     Battle.fire(game_pid, "test")
 
@@ -38,7 +41,8 @@ defmodule BattleTest do
   end
 
   test "Evaluate hits" do
-    {:ok, game_pid} = Battle.start_link([])
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
     {:ok, tank_pid} = Battle.create_tank(game_pid, "test")
     tanks = [tank_pid]
 
@@ -58,7 +62,8 @@ defmodule BattleTest do
   end
 
   test "Tank process restarts when killed" do
-    {:ok, game_pid} = Battle.start_link([])
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
     {:ok, pid} = Battle.create_tank(game_pid, "test")
 
     Process.exit(pid, :kill)

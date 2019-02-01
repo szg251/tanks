@@ -17,7 +17,8 @@ defmodule TanksWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   def connect(params, socket) do
-    {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
 
     {:ok,
      socket
