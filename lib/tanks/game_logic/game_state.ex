@@ -11,7 +11,7 @@ defmodule Tanks.GameLogic.GameState do
             bullets: []
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts ++ [name: __MODULE__])
+    GenServer.start_link(__MODULE__, :ok, opts)
   end
 
   @doc """
@@ -19,13 +19,14 @@ defmodule Tanks.GameLogic.GameState do
 
   ## Example
 
-      iex> {:ok, pid} = Tanks.GameLogic.GameState.create_tank("test")
+      iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+      iex> {:ok, pid} = Tanks.GameLogic.GameState.create_tank(game_pid, "test")
       iex> is_pid(pid)
       true
 
   """
-  def create_tank(tank_id) do
-    GenServer.call(__MODULE__, {:create_tank, tank_id})
+  def create_tank(game_pid, tank_id) do
+    GenServer.call(game_pid, {:create_tank, tank_id})
   end
 
   @doc """
@@ -33,16 +34,18 @@ defmodule Tanks.GameLogic.GameState do
 
     ## Example
 
-    iex> Tanks.GameLogic.GameState.remove_tank("test")
+    iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    iex> Tanks.GameLogic.GameState.remove_tank(game_pid, "test")
     :error
 
-    iex> Tanks.GameLogic.GameState.create_tank("test")
-    iex> Tanks.GameLogic.GameState.remove_tank("test")
+    iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    iex> Tanks.GameLogic.GameState.create_tank(game_pid, "test")
+    iex> Tanks.GameLogic.GameState.remove_tank(game_pid, "test")
     :ok
 
   """
-  def remove_tank(tank_id) do
-    GenServer.call(__MODULE__, {:remove_tank, tank_id})
+  def remove_tank(game_pid, tank_id) do
+    GenServer.call(game_pid, {:remove_tank, tank_id})
   end
 
   @doc """
@@ -50,16 +53,18 @@ defmodule Tanks.GameLogic.GameState do
 
   ## Example
 
-      iex> Tanks.GameLogic.GameState.get_state()
+      iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+      iex> Tanks.GameLogic.GameState.get_state(game_pid)
       %{tanks: [], bullets: []}
 
-      iex> Tanks.GameLogic.GameState.create_tank("test")
-      iex> Tanks.GameLogic.GameState.get_state()
+      iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+      iex> Tanks.GameLogic.GameState.create_tank(game_pid, "test")
+      iex> Tanks.GameLogic.GameState.get_state(game_pid)
       %{tanks: [%Tanks.GameLogic.Tank{}], bullets: []}
 
   """
-  def get_state do
-    GenServer.call(__MODULE__, :get_state)
+  def get_state(game_pid) do
+    GenServer.call(game_pid, :get_state)
   end
 
   @doc """
@@ -67,17 +72,19 @@ defmodule Tanks.GameLogic.GameState do
 
     ## Examples
 
-    iex> Tanks.GameLogic.GameState.get_pid("test")
+    iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    iex> Tanks.GameLogic.GameState.get_pid(game_pid, "test")
     :error
 
-    iex> Tanks.GameLogic.GameState.create_tank("test")
-    iex> {:ok, pid} = Tanks.GameLogic.GameState.get_pid("test")
+    iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    iex> Tanks.GameLogic.GameState.create_tank(game_pid, "test")
+    iex> {:ok, pid} = Tanks.GameLogic.GameState.get_pid(game_pid, "test")
     iex> is_pid(pid)
     true
 
   """
-  def get_pid(tank_id) do
-    GenServer.call(__MODULE__, {:get_pid, tank_id})
+  def get_pid(game_pid, tank_id) do
+    GenServer.call(game_pid, {:get_pid, tank_id})
   end
 
   @doc """
@@ -85,14 +92,15 @@ defmodule Tanks.GameLogic.GameState do
 
     ## Example
 
-    iex> Tanks.GameLogic.GameState.create_tank("test")
-    iex> Tanks.GameLogic.GameState.fire("test")
-    iex> Tanks.GameLogic.GameState.get_state().bullets
+    iex> {:ok, game_pid} = Tanks.GameLogic.GameState.start_link([])
+    iex> Tanks.GameLogic.GameState.create_tank(game_pid, "test")
+    iex> Tanks.GameLogic.GameState.fire(game_pid, "test")
+    iex> Tanks.GameLogic.GameState.get_state(game_pid).bullets
     [%Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}]
 
   """
-  def fire(tank_id) do
-    GenServer.cast(__MODULE__, {:fire, tank_id})
+  def fire(game_pid, tank_id) do
+    GenServer.cast(game_pid, {:fire, tank_id})
   end
 
   defp schedule_tick() do
