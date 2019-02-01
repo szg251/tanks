@@ -1,11 +1,11 @@
-defmodule GameStateTest do
+defmodule BattleTest do
   use ExUnit.Case
 
-  alias Tanks.GameLogic.GameState
+  alias Tanks.GameLogic.Battle
   alias Tanks.GameLogic.Tank
   alias Tanks.GameLogic.Bullet
 
-  doctest Tanks.GameLogic.GameState
+  doctest Tanks.GameLogic.Battle
   doctest Tanks.GameLogic.Field
 
   setup do
@@ -14,32 +14,32 @@ defmodule GameStateTest do
   end
 
   test "Removing a tank also stops its process" do
-    {:ok, game_pid} = GameState.start_link([])
-    {:ok, pid} = GameState.create_tank(game_pid, "test")
-    GameState.remove_tank(game_pid, "test")
+    {:ok, game_pid} = Battle.start_link([])
+    {:ok, pid} = Battle.create_tank(game_pid, "test")
+    Battle.remove_tank(game_pid, "test")
 
     assert !Process.alive?(pid)
   end
 
   test "Bullet out of field" do
-    {:ok, game_pid} = GameState.start_link([])
-    GameState.create_tank(game_pid, "test")
-    GameState.fire(game_pid, "test")
+    {:ok, game_pid} = Battle.start_link([])
+    Battle.create_tank(game_pid, "test")
+    Battle.fire(game_pid, "test")
 
-    bullets = GameState.get_state(game_pid).bullets
+    bullets = Battle.get_state(game_pid).bullets
     assert length(bullets) == 1
 
     for _ <- 0..115 do
       Process.send(game_pid, :tick, [])
     end
 
-    new_bullets = GameState.get_state(game_pid).bullets
+    new_bullets = Battle.get_state(game_pid).bullets
     assert length(new_bullets) == 0
   end
 
   test "Evaluate hits" do
-    {:ok, game_pid} = GameState.start_link([])
-    {:ok, tank_pid} = GameState.create_tank(game_pid, "test")
+    {:ok, game_pid} = Battle.start_link([])
+    {:ok, tank_pid} = Battle.create_tank(game_pid, "test")
     tanks = [tank_pid]
 
     bullets = [
@@ -48,7 +48,7 @@ defmodule GameStateTest do
       %Bullet{width: 3, height: 3, x: 10, y: 450, velocity_x: 0, velocity_y: 0}
     ]
 
-    remained_bullets = GameState.get_hits(tanks, bullets)
+    remained_bullets = Battle.get_hits(tanks, bullets)
 
     assert length(remained_bullets) == 1
 
@@ -58,11 +58,11 @@ defmodule GameStateTest do
   end
 
   test "Tank process restarts when killed" do
-    {:ok, game_pid} = GameState.start_link([])
-    {:ok, pid} = GameState.create_tank(game_pid, "test")
+    {:ok, game_pid} = Battle.start_link([])
+    {:ok, pid} = Battle.create_tank(game_pid, "test")
 
     Process.exit(pid, :kill)
-    new_pid = GameState.get_pid(game_pid, "test")
+    new_pid = Battle.get_pid(game_pid, "test")
     assert pid != new_pid
   end
 end
