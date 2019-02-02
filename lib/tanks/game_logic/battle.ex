@@ -97,6 +97,28 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   @doc """
+  Count tanks
+
+    ## Example
+
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> Tanks.GameLogic.Battle.count_tanks(game_pid)
+    0
+
+    iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
+    iex> Tanks.GameLogic.Battle.count_tanks(game_pid)
+    1
+
+
+  """
+  def count_tanks(game_pid) do
+    GenServer.call(game_pid, :count_tanks)
+  end
+
+  @doc """
   Fires a bullet from the specified tank
 
     ## Example
@@ -200,6 +222,11 @@ defmodule Tanks.GameLogic.Battle do
   # Get tank PID
   def handle_call({:get_pid, tank_id}, _from, state) do
     {:reply, state.tanks |> Map.fetch(tank_id), state}
+  end
+
+  # Count tanks
+  def handle_call(:count_tanks, _from, state) do
+    {:reply, state.tanks |> Map.size(), state}
   end
 
   # Fire a bullet

@@ -12,8 +12,9 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test")
-    :ok
+    iex> {:ok, battle_pid} = Tanks.BattleLodge.start_battle("test")
+    iex> is_pid(battle_pid)
+    true
 
     iex> Tanks.BattleLodge.start_battle("test")
     iex> Tanks.BattleLodge.start_battle("test")
@@ -31,8 +32,8 @@ defmodule Tanks.BattleLodge do
 
     iex> Tanks.BattleLodge.start_battle("test")
     iex> Tanks.BattleLodge.close_battle("test")
-    iex> Tanks.BattleLodge.list_battles() |> length
-    0
+    iex> Tanks.BattleLodge.list_battles()
+    []
 
   """
   def close_battle(name) when is_binary(name) do
@@ -40,15 +41,20 @@ defmodule Tanks.BattleLodge do
   end
 
   @doc """
-  Close a battle server
+  List battle servers
 
   ## Example
 
     iex> Tanks.BattleLodge.start_battle("test")
-    iex> [{"test", pid}] = Tanks.BattleLodge.list_battles()
-    iex> is_pid(pid)
-    true
+    iex> [{"test", pid, player_count}] = Tanks.BattleLodge.list_battles()
+    iex> {is_pid(pid), player_count}
+    {true, 0}
 
+    iex> {:ok, battle_pid} = Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.GameLogic.Battle.create_tank(battle_pid, "test")
+    iex> [{"test", pid, player_count}] = Tanks.BattleLodge.list_battles()
+    iex> {is_pid(pid), player_count}
+    {true, 1}
 
   """
   def list_battles do
@@ -65,14 +71,19 @@ defmodule Tanks.BattleLodge do
     success = :ets.insert_new(:battles, {name, pid})
 
     if success do
-      {:reply, :ok, state}
+      {:reply, {:ok, pid}, state}
     else
       {:reply, :error, state}
     end
   end
 
   def handle_call(:list_battles, _from, state) do
-    list = :ets.tab2list(:battles)
+    list =
+      :ets.tab2list(:battles)
+      |> Enum.map(fn {name, pid} ->
+        {name, pid, Tanks.GameLogic.Battle.count_tanks(pid)}
+      end)
+
     {:reply, list, state}
   end
 

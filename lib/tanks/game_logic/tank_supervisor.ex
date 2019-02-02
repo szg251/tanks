@@ -20,4 +20,8 @@ defmodule Tanks.GameLogic.TankSupervisor do
   def get_tanks(tank_sup_pid) do
     DynamicSupervisor.which_children(tank_sup_pid)
   end
+
+  def count_tanks(tank_sup_pid) do
+    DynamicSupervisor.count_children(tank_sup_pid)
+  end
 end
