@@ -1,7 +1,12 @@
+defmodule Tanks.BattleLodge.BattleSummary do
+  defstruct [:name, :pid, :player_count]
+end
+
 defmodule Tanks.BattleLodge do
   use GenServer
 
   alias Tanks.BattleSupervisor
+  alias Tanks.BattleLodge.BattleSummary
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, :ok, opts ++ [name: __MODULE__])
@@ -12,8 +17,8 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> {:ok, battle_pid} = Tanks.BattleLodge.start_battle("test")
-    iex> is_pid(battle_pid)
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> is_pid(battle.pid)
     true
 
     iex> Tanks.BattleLodge.start_battle("test")
@@ -46,19 +51,35 @@ defmodule Tanks.BattleLodge do
   ## Example
 
     iex> Tanks.BattleLodge.start_battle("test")
-    iex> [{"test", pid, player_count}] = Tanks.BattleLodge.list_battles()
-    iex> {is_pid(pid), player_count}
+    iex> [battle] = Tanks.BattleLodge.list_battles()
+    iex> {is_pid(battle.pid), battle.player_count}
     {true, 0}
 
     iex> {:ok, battle_pid} = Tanks.BattleLodge.start_battle("test")
     iex> Tanks.GameLogic.Battle.create_tank(battle_pid, "test")
-    iex> [{"test", pid, player_count}] = Tanks.BattleLodge.list_battles()
-    iex> {is_pid(pid), player_count}
+    iex> [battle] = Tanks.BattleLodge.list_battles()
+    iex> {is_pid(battle.pid), battle.player_count}
     {true, 1}
 
   """
   def list_battles do
     GenServer.call(__MODULE__, :list_battles)
+  end
+
+  @doc """
+  Get battle summary by name
+
+  ## Example
+
+    iex> Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.BattleLodge.list_battles()
+    iex> {:ok, battle} = Tanks.BattleLodge.get_summary("test")
+    iex> {is_pid(battle.pid), battle.player_count}
+    {true, 0}
+
+  """
+  def get_summary(name) do
+    GenServer.call(__MODULE__, {:get_summary, name})
   end
 
   def init(:ok) do
@@ -71,7 +92,7 @@ defmodule Tanks.BattleLodge do
     success = :ets.insert_new(:battles, {name, pid})
 
     if success do
-      {:reply, {:ok, pid}, state}
+      {:reply, {:ok, to_summary({name, pid})}, state}
     else
       {:reply, :error, state}
     end
@@ -80,11 +101,16 @@ defmodule Tanks.BattleLodge do
   def handle_call(:list_battles, _from, state) do
     list =
       :ets.tab2list(:battles)
-      |> Enum.map(fn {name, pid} ->
-        {name, pid, Tanks.GameLogic.Battle.count_tanks(pid)}
-      end)
+      |> Enum.map(&to_summary(&1))
 
     {:reply, list, state}
+  end
+
+  def handle_call({:get_summary, name}, _from, state) do
+    case :ets.lookup(:battles, name) do
+      [] -> :error
+      [battle] -> {:ok, to_summary(battle)}
+    end
   end
 
   def handle_cast({:close_battle, name}, state) do
@@ -93,5 +119,9 @@ defmodule Tanks.BattleLodge do
     BattleSupervisor.close_battle(battle_pid)
 
     {:noreply, state}
+  end
+
+  defp to_summary({name, pid}) do
+    %BattleSummary{name: name, pid: pid, player_count: Tanks.GameLogic.Battle.count_tanks(pid)}
   end
 end
