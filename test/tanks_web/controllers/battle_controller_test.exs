@@ -2,7 +2,6 @@ defmodule TanksWeb.BattleControllerTest do
   use TanksWeb.ConnCase
 
   alias Tanks.BattleLodge
-  alias Tanks.BattleLodge.BattleSummary
 
   @create_attrs %{}
   @update_attrs %{}

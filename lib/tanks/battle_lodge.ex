@@ -50,16 +50,16 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test")
-    iex> [battle] = Tanks.BattleLodge.list_battles()
-    iex> {is_pid(battle.pid), battle.player_count}
-    {true, 0}
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> [battle2] = Tanks.BattleLodge.list_battles()
+    iex> battle == battle2
+    true
 
-    iex> {:ok, battle_pid} = Tanks.BattleLodge.start_battle("test")
-    iex> Tanks.GameLogic.Battle.create_tank(battle_pid, "test")
-    iex> [battle] = Tanks.BattleLodge.list_battles()
-    iex> {is_pid(battle.pid), battle.player_count}
-    {true, 1}
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.GameLogic.Battle.create_tank(battle.pid, "test")
+    iex> [battle2] = Tanks.BattleLodge.list_battles()
+    iex> {battle.player_count, battle2.player_count}
+    {0, 1}
 
   """
   def list_battles do
@@ -99,17 +99,15 @@ defmodule Tanks.BattleLodge do
   end
 
   def handle_call(:list_battles, _from, state) do
-    list =
-      :ets.tab2list(:battles)
-      |> Enum.map(&to_summary(&1))
+    list = :ets.tab2list(:battles) |> Enum.map(&to_summary(&1))
 
     {:reply, list, state}
   end
 
   def handle_call({:get_summary, name}, _from, state) do
     case :ets.lookup(:battles, name) do
-      [] -> :error
-      [battle] -> {:ok, to_summary(battle)}
+      [] -> {:reply, :error, state}
+      [battle] -> {:reply, {:ok, to_summary(battle)}, state}
     end
   end
 

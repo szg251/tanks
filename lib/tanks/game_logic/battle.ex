@@ -227,6 +227,7 @@ defmodule Tanks.GameLogic.Battle do
   # Count tanks
   def handle_call(:count_tanks, _from, state) do
     {:reply, state.tanks |> Map.size(), state}
+    # {:reply, Tanks.GameLogic.TankSupervisor.count_tanks(state.tank_sup_pid).active, state}
   end
 
   # Fire a bullet
