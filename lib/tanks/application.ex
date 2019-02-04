@@ -11,7 +11,7 @@ defmodule Tanks.Application do
       # Start the endpoint when the application starts
       TanksWeb.Endpoint,
       TanksWeb.Presence,
-      Tanks.BattleLodge,
+      Tanks.Lodge,
       Tanks.BattleSupervisor
       # Starts a worker by calling: Tanks.Worker.start_link(arg)
       # {Tanks.Worker, arg},

@@ -1,7 +1,7 @@
-defmodule BattleLodgeTest do
+defmodule LodgeTest do
   use ExUnit.Case
 
-  doctest Tanks.BattleLodge
+  doctest Tanks.Lodge
 
   setup do
     Application.stop(:tanks)

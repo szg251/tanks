@@ -1,13 +1,13 @@
 defmodule TanksWeb.BattleController do
   use TanksWeb, :controller
 
-  alias Tanks.BattleLodge
-  alias Tanks.BattleLodge.BattleSummary
+  alias Tanks.Lodge
+  alias Tanks.Lodge.BattleSummary
 
   action_fallback(TanksWeb.FallbackController)
 
   def index(conn, _params) do
-    battles = BattleLodge.list_battles()
+    battles = Lodge.list_battles()
     render(conn, "index.json", battles: battles)
   end
 
@@ -18,7 +18,7 @@ defmodule TanksWeb.BattleController do
       |> put_view(TanksWeb.ErrorView)
       |> render(:"422")
     else
-      with {:ok, %BattleSummary{} = battle} <- BattleLodge.start_battle(name, owner_name) do
+      with {:ok, %BattleSummary{} = battle} <- Lodge.start_battle(name, owner_name) do
         conn
         |> put_status(:created)
         |> render("show.json", battle: battle)
@@ -27,7 +27,7 @@ defmodule TanksWeb.BattleController do
   end
 
   def show(conn, %{"battle_name" => name}) do
-    with {:ok, %BattleSummary{} = battle} <- BattleLodge.get_summary(name) do
+    with {:ok, %BattleSummary{} = battle} <- Lodge.get_summary(name) do
       render(conn, "show.json", battle: battle)
     else
       _ ->
@@ -39,7 +39,7 @@ defmodule TanksWeb.BattleController do
   end
 
   def delete(conn, %{"battle_name" => battle_name, "player_name" => player_name}) do
-    with :ok <- BattleLodge.close_battle(battle_name, player_name) do
+    with :ok <- Lodge.close_battle(battle_name, player_name) do
       send_resp(conn, :no_content, "")
     end
   end

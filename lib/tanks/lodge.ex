@@ -1,12 +1,12 @@
-defmodule Tanks.BattleLodge.BattleSummary do
+defmodule Tanks.Lodge.BattleSummary do
   defstruct [:name, :pid, :player_count, :owner_name]
 end
 
-defmodule Tanks.BattleLodge do
+defmodule Tanks.Lodge do
   use GenServer
 
   alias Tanks.BattleSupervisor
-  alias Tanks.BattleLodge.BattleSummary
+  alias Tanks.Lodge.BattleSummary
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, :ok, opts ++ [name: __MODULE__])
@@ -17,12 +17,12 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
+    iex> {:ok, battle} = Tanks.Lodge.start_battle("test", "owner")
     iex> is_pid(battle.pid)
     true
 
-    iex> Tanks.BattleLodge.start_battle("test", "owner")
-    iex> Tanks.BattleLodge.start_battle("test", "owner")
+    iex> Tanks.Lodge.start_battle("test", "owner")
+    iex> Tanks.Lodge.start_battle("test", "owner")
     :error
 
   """
@@ -35,14 +35,14 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test", "owner")
-    iex> Tanks.BattleLodge.close_battle("test", "owner")
-    iex> Tanks.BattleLodge.list_battles() |> length
+    iex> Tanks.Lodge.start_battle("test", "owner")
+    iex> Tanks.Lodge.close_battle("test", "owner")
+    iex> Tanks.Lodge.list_battles() |> length
     0
 
-    iex> Tanks.BattleLodge.start_battle("test", "owner")
-    iex> Tanks.BattleLodge.close_battle("test", "someone else")
-    iex> Tanks.BattleLodge.list_battles() |> length
+    iex> Tanks.Lodge.start_battle("test", "owner")
+    iex> Tanks.Lodge.close_battle("test", "someone else")
+    iex> Tanks.Lodge.list_battles() |> length
     1
 
   """
@@ -55,14 +55,14 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
-    iex> [battle2] = Tanks.BattleLodge.list_battles()
+    iex> {:ok, battle} = Tanks.Lodge.start_battle("test", "owner")
+    iex> [battle2] = Tanks.Lodge.list_battles()
     iex> battle == battle2
     true
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
+    iex> {:ok, battle} = Tanks.Lodge.start_battle("test", "owner")
     iex> Tanks.GameLogic.Battle.create_tank(battle.pid, "test")
-    iex> [battle2] = Tanks.BattleLodge.list_battles()
+    iex> [battle2] = Tanks.Lodge.list_battles()
     iex> {battle.player_count, battle2.player_count}
     {0, 1}
 
@@ -76,9 +76,9 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test", "owner")
-    iex> Tanks.BattleLodge.list_battles()
-    iex> {:ok, battle} = Tanks.BattleLodge.get_summary("test")
+    iex> Tanks.Lodge.start_battle("test", "owner")
+    iex> Tanks.Lodge.list_battles()
+    iex> {:ok, battle} = Tanks.Lodge.get_summary("test")
     iex> {is_pid(battle.pid), battle.player_count}
     {true, 0}
 

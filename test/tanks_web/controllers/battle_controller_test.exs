@@ -1,13 +1,13 @@
 defmodule TanksWeb.BattleControllerTest do
   use TanksWeb.ConnCase
 
-  alias Tanks.BattleLodge
+  alias Tanks.Lodge
 
   @create_attrs %{"name" => "test_name", "owner_name" => "test_owner"}
   @invalid_attrs %{"name" => 123, "owner_name" => "test"}
 
   def fixture(:battle) do
-    {:ok, battle} = BattleLodge.start_battle("test_name", "test_owner")
+    {:ok, battle} = Lodge.start_battle("test_name", "test_owner")
     battle
   end
 
