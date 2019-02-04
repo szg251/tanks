@@ -3,16 +3,17 @@ defmodule TanksWeb.BattleControllerTest do
 
   alias Tanks.BattleLodge
 
-  @create_attrs %{}
-  @update_attrs %{}
-  @invalid_attrs %{}
+  @create_attrs %{"name" => "test_name", "owner_name" => "test_owner"}
+  @invalid_attrs %{"name" => 123, "owner_name" => "test"}
 
   def fixture(:battle) do
-    {:ok, battle} = BattleLodge.create_battle(@create_attrs)
+    {:ok, battle} = BattleLodge.start_battle("test_name", "test_owner")
     battle
   end
 
   setup %{conn: conn} do
+    Application.stop(:tanks)
+    :ok = Application.start(:tanks)
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
 
@@ -26,18 +27,39 @@ defmodule TanksWeb.BattleControllerTest do
   describe "create battle" do
     test "renders battle when data is valid", %{conn: conn} do
       conn = post(conn, Routes.battle_path(conn, :create), battle: @create_attrs)
-      assert %{"id" => id} = json_response(conn, 201)["data"]
-
-      conn = get(conn, Routes.battle_path(conn, :show, id))
 
       assert %{
-               "id" => id
+               "name" => name,
+               "player_count" => player_count,
+               "owner_name" => owner_name
+             } = json_response(conn, 201)["data"]
+
+      conn = get(conn, Routes.battle_path(conn, :show, name))
+
+      assert %{
+               "name" => name,
+               "player_count" => player_count,
+               "owner_name" => owner_name
              } = json_response(conn, 200)["data"]
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
       conn = post(conn, Routes.battle_path(conn, :create), battle: @invalid_attrs)
-      assert json_response(conn, 422)["errors"] != %{}
+      assert response(conn, 422)
+    end
+  end
+
+  describe "show battle" do
+    setup [:create_battle]
+
+    test "renders battle", %{conn: conn, battle: battle} do
+      conn = get(conn, Routes.battle_path(conn, :show, battle.name))
+
+      assert json_response(conn, 200)["data"] == %{
+               "name" => battle.name,
+               "owner_name" => battle.owner_name,
+               "player_count" => 0
+             }
     end
   end
 
@@ -45,12 +67,14 @@ defmodule TanksWeb.BattleControllerTest do
     setup [:create_battle]
 
     test "deletes chosen battle", %{conn: conn, battle: battle} do
-      conn = delete(conn, Routes.battle_path(conn, :delete, battle))
+      conn =
+        delete(conn, Routes.battle_path(conn, :delete, battle.name),
+          player_name: battle.owner_name
+        )
+
       assert response(conn, 204)
 
-      assert_error_sent(404, fn ->
-        get(conn, Routes.battle_path(conn, :show, battle))
-      end)
+      assert response(get(conn, Routes.battle_path(conn, :show, battle.name)), 404)
     end
   end
 

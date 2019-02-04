@@ -11,6 +11,6 @@ defmodule TanksWeb.BattleView do
   end
 
   def render("battle.json", %{battle: battle}) do
-    %{name: battle.name, player_count: battle.player_count}
+    %{name: battle.name, player_count: battle.player_count, owner_name: battle.owner_name}
   end
 end

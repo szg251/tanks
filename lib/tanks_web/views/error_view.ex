@@ -7,6 +7,10 @@ defmodule TanksWeb.ErrorView do
   #   "Internal Server Error"
   # end
 
+  def render("422.html", _assigns) do
+    %{"errors" => ["Invalid Request"]}
+  end
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.html" becomes
   # "Not Found".
