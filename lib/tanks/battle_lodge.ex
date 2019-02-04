@@ -1,5 +1,5 @@
 defmodule Tanks.BattleLodge.BattleSummary do
-  defstruct [:name, :pid, :player_count]
+  defstruct [:name, :pid, :player_count, :owner_name]
 end
 
 defmodule Tanks.BattleLodge do
@@ -17,17 +17,17 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
     iex> is_pid(battle.pid)
     true
 
-    iex> Tanks.BattleLodge.start_battle("test")
-    iex> Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.BattleLodge.start_battle("test", "owner")
+    iex> Tanks.BattleLodge.start_battle("test", "owner")
     :error
 
   """
-  def start_battle(name) when is_binary(name) do
-    GenServer.call(__MODULE__, {:start_battle, name})
+  def start_battle(name, owner_name) when is_binary(name) do
+    GenServer.call(__MODULE__, {:start_battle, name, owner_name})
   end
 
   @doc """
@@ -35,7 +35,7 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.BattleLodge.start_battle("test", "owner")
     iex> Tanks.BattleLodge.close_battle("test")
     iex> Tanks.BattleLodge.list_battles()
     []
@@ -50,12 +50,12 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
     iex> [battle2] = Tanks.BattleLodge.list_battles()
     iex> battle == battle2
     true
 
-    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test")
+    iex> {:ok, battle} = Tanks.BattleLodge.start_battle("test", "owner")
     iex> Tanks.GameLogic.Battle.create_tank(battle.pid, "test")
     iex> [battle2] = Tanks.BattleLodge.list_battles()
     iex> {battle.player_count, battle2.player_count}
@@ -71,7 +71,7 @@ defmodule Tanks.BattleLodge do
 
   ## Example
 
-    iex> Tanks.BattleLodge.start_battle("test")
+    iex> Tanks.BattleLodge.start_battle("test", "owner")
     iex> Tanks.BattleLodge.list_battles()
     iex> {:ok, battle} = Tanks.BattleLodge.get_summary("test")
     iex> {is_pid(battle.pid), battle.player_count}
@@ -87,12 +87,12 @@ defmodule Tanks.BattleLodge do
     {:ok, Map.new()}
   end
 
-  def handle_call({:start_battle, name}, _from, state) do
+  def handle_call({:start_battle, name, owner_name}, _from, state) do
     {:ok, pid} = BattleSupervisor.start_battle()
-    success = :ets.insert_new(:battles, {name, pid})
+    success = :ets.insert_new(:battles, {name, pid, owner_name})
 
     if success do
-      {:reply, {:ok, to_summary({name, pid})}, state}
+      {:reply, {:ok, to_summary({name, pid, owner_name})}, state}
     else
       {:reply, :error, state}
     end
@@ -112,14 +112,19 @@ defmodule Tanks.BattleLodge do
   end
 
   def handle_cast({:close_battle, name}, state) do
-    [{^name, battle_pid}] = :ets.lookup(:battles, name)
+    [{^name, battle_pid, _owner_name}] = :ets.lookup(:battles, name)
     :ets.delete(:battles, name)
     BattleSupervisor.close_battle(battle_pid)
 
     {:noreply, state}
   end
 
-  defp to_summary({name, pid}) do
-    %BattleSummary{name: name, pid: pid, player_count: Tanks.GameLogic.Battle.count_tanks(pid)}
+  defp to_summary({name, pid, owner_name}) do
+    %BattleSummary{
+      name: name,
+      pid: pid,
+      owner_name: owner_name,
+      player_count: Tanks.GameLogic.Battle.count_tanks(pid)
+    }
   end
 end
