@@ -1,5 +1,17 @@
 defmodule Tanks.Lodge.BattleSummary do
   defstruct [:name, :pid, :player_count, :owner_name]
+
+  @doc """
+  Creates a battle summary from ETS stored data
+  """
+  def create({name, pid, owner_name}) when is_pid(pid) and is_binary(name) do
+    %Tanks.Lodge.BattleSummary{
+      name: name,
+      pid: pid,
+      owner_name: owner_name,
+      player_count: Tanks.GameLogic.Battle.count_tanks(pid)
+    }
+  end
 end
 
 defmodule Tanks.Lodge do
@@ -97,14 +109,14 @@ defmodule Tanks.Lodge do
     success = :ets.insert_new(:battles, {name, pid, owner_name})
 
     if success do
-      {:reply, {:ok, to_summary({name, pid, owner_name})}, state}
+      {:reply, {:ok, BattleSummary.create({name, pid, owner_name})}, state}
     else
       {:reply, :error, state}
     end
   end
 
   def handle_call(:list_battles, _from, state) do
-    list = :ets.tab2list(:battles) |> Enum.map(&to_summary(&1))
+    list = :ets.tab2list(:battles) |> Enum.map(&BattleSummary.create(&1))
 
     {:reply, list, state}
   end
@@ -112,7 +124,7 @@ defmodule Tanks.Lodge do
   def handle_call({:get_summary, name}, _from, state) do
     case :ets.lookup(:battles, name) do
       [] -> {:reply, :error, state}
-      [battle] -> {:reply, {:ok, to_summary(battle)}, state}
+      [battle] -> {:reply, {:ok, BattleSummary.create(battle)}, state}
     end
   end
 
@@ -125,14 +137,5 @@ defmodule Tanks.Lodge do
     end
 
     {:noreply, state}
-  end
-
-  defp to_summary({name, pid, owner_name}) do
-    %BattleSummary{
-      name: name,
-      pid: pid,
-      owner_name: owner_name,
-      player_count: Tanks.GameLogic.Battle.count_tanks(pid)
-    }
   end
 end
