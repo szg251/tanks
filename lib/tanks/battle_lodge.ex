@@ -36,13 +36,18 @@ defmodule Tanks.BattleLodge do
   ## Example
 
     iex> Tanks.BattleLodge.start_battle("test", "owner")
-    iex> Tanks.BattleLodge.close_battle("test")
-    iex> Tanks.BattleLodge.list_battles()
-    []
+    iex> Tanks.BattleLodge.close_battle("test", "owner")
+    iex> Tanks.BattleLodge.list_battles() |> length
+    0
+
+    iex> Tanks.BattleLodge.start_battle("test", "owner")
+    iex> Tanks.BattleLodge.close_battle("test", "someone else")
+    iex> Tanks.BattleLodge.list_battles() |> length
+    1
 
   """
-  def close_battle(name) when is_binary(name) do
-    GenServer.cast(__MODULE__, {:close_battle, name})
+  def close_battle(name, player_name) when is_binary(name) do
+    GenServer.cast(__MODULE__, {:close_battle, name, player_name})
   end
 
   @doc """
@@ -111,10 +116,13 @@ defmodule Tanks.BattleLodge do
     end
   end
 
-  def handle_cast({:close_battle, name}, state) do
-    [{^name, battle_pid, _owner_name}] = :ets.lookup(:battles, name)
-    :ets.delete(:battles, name)
-    BattleSupervisor.close_battle(battle_pid)
+  def handle_cast({:close_battle, name, player_name}, state) do
+    [{^name, battle_pid, owner_name}] = :ets.lookup(:battles, name)
+
+    if owner_name == player_name do
+      :ets.delete(:battles, name)
+      BattleSupervisor.close_battle(battle_pid)
+    end
 
     {:noreply, state}
   end
