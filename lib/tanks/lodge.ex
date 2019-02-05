@@ -94,6 +94,9 @@ defmodule Tanks.Lodge do
     iex> {is_pid(battle.pid), battle.player_count}
     {true, 0}
 
+    iex> Tanks.Lodge.get_summary("test")
+    :error
+
   """
   def get_summary(name) do
     GenServer.call(__MODULE__, {:get_summary, name})
