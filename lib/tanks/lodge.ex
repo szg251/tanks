@@ -102,8 +102,17 @@ defmodule Tanks.Lodge do
     GenServer.call(__MODULE__, {:get_battle, name})
   end
 
+  def create_player(name) do
+    :ets.insert_new(:players, name)
+  end
+
+  def remove_player(name) do
+    :ets.delete(:players, name)
+  end
+
   def init(:ok) do
     :ets.new(:battles, [:named_table])
+    :ets.new(:players, [:named_table])
     {:ok, Map.new()}
   end
 

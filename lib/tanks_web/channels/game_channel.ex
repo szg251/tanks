@@ -10,11 +10,13 @@ defmodule TanksWeb.GameChannel do
     case Tanks.Lodge.get_battle(battle_name) do
       {:ok, battle} ->
         Battle.create_tank(battle.pid, socket.assigns.user_id)
+
         schedule_push(%Battle{})
+        IO.inspect(socket.assigns.user_id)
         {:ok, socket |> assign(:battle_pid, battle.pid)}
 
       :error ->
-        {:error, socket}
+        {:error, %{reason: "battle is closed"}}
     end
   end
 

@@ -45,7 +45,7 @@ init battleName =
       , window = { width = 1000, height = 600 }
       , battleName = battleName
       }
-    , Channel.join "game:lobby"
+    , Channel.join ("game:" ++ battleName)
     )
 
 

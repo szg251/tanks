@@ -1,4 +1,4 @@
-module Data.BattleSummary exposing (BattleSummary, decoder, responseDecoder)
+module Data.BattleSummary exposing (BattleSummary, decoder)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
@@ -17,8 +17,3 @@ decoder =
         |> required "name" Decode.string
         |> required "owner_name" Decode.string
         |> required "player_count" Decode.int
-
-
-responseDecoder : Decoder (List BattleSummary)
-responseDecoder =
-    Decode.field "data" (Decode.list decoder)
