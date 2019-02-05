@@ -27,7 +27,7 @@ defmodule TanksWeb.BattleController do
   end
 
   def show(conn, %{"battle_name" => name}) do
-    with {:ok, %BattleSummary{} = battle} <- Lodge.get_summary(name) do
+    with {:ok, %BattleSummary{} = battle} <- Lodge.get_battle(name) do
       render(conn, "show.json", battle: battle)
     else
       _ ->

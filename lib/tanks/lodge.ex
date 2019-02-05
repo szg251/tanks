@@ -90,16 +90,16 @@ defmodule Tanks.Lodge do
 
     iex> Tanks.Lodge.start_battle("test", "owner")
     iex> Tanks.Lodge.list_battles()
-    iex> {:ok, battle} = Tanks.Lodge.get_summary("test")
+    iex> {:ok, battle} = Tanks.Lodge.get_battle("test")
     iex> {is_pid(battle.pid), battle.player_count}
     {true, 0}
 
-    iex> Tanks.Lodge.get_summary("test")
+    iex> Tanks.Lodge.get_battle("test")
     :error
 
   """
-  def get_summary(name) do
-    GenServer.call(__MODULE__, {:get_summary, name})
+  def get_battle(name) do
+    GenServer.call(__MODULE__, {:get_battle, name})
   end
 
   def init(:ok) do
@@ -124,7 +124,7 @@ defmodule Tanks.Lodge do
     {:reply, list, state}
   end
 
-  def handle_call({:get_summary, name}, _from, state) do
+  def handle_call({:get_battle, name}, _from, state) do
     case :ets.lookup(:battles, name) do
       [] -> {:reply, :error, state}
       [battle] -> {:reply, {:ok, BattleSummary.create(battle)}, state}

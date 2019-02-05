@@ -7,7 +7,7 @@ defmodule TanksWeb.GameChannel do
   @tick_rate 30
 
   def join("game:" <> battle_name, _payload, socket) do
-    case Tanks.Lodge.get_summary(battle_name) do
+    case Tanks.Lodge.get_battle(battle_name) do
       {:ok, battle} ->
         Battle.create_tank(battle.pid, socket.assigns.user_id)
         schedule_push(%Battle{})
