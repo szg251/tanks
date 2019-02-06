@@ -2,7 +2,7 @@ module Page.Battle exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
-import Channel
+import Channel exposing (Channel, Socket)
 import Data.Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import GameState exposing (Bullet, GameState, Tank)
@@ -19,7 +19,9 @@ type Msg
     | ResizeWindow Int Int
     | KeyUp Key
     | KeyDown Key
-    | ChannelMsg Channel.Msg
+    | GotSocket (Result Decode.Error Socket)
+    | GotChannel (Result Decode.Error Channel)
+    | GotChannelResponse (Result Decode.Error Channel.Response)
 
 
 type Key
@@ -35,6 +37,7 @@ type alias Model =
     , window : { width : Int, height : Int }
     , battleName : String
     , session : Session
+    , channel : Maybe Channel
     }
 
 
@@ -48,16 +51,14 @@ init session battleName =
       , window = session.window
       , battleName = battleName
       , session = session
+      , channel = Nothing
       }
     , case session.playerName of
         Nothing ->
             Cmd.none
 
         Just name ->
-            Cmd.batch
-                [ Channel.connect (String20.value name)
-                , Channel.join ("game:" ++ battleName)
-                ]
+            Channel.connect (String20.value name)
     )
 
 
@@ -86,52 +87,73 @@ update msg model =
 
         KeyDown key ->
             ( model
-            , case key of
-                ArrowRight ->
-                    Channel.moveTank 1
+            , case model.channel of
+                Just channel ->
+                    case key of
+                        ArrowRight ->
+                            Channel.moveTank channel 1
 
-                ArrowLeft ->
-                    Channel.moveTank -1
+                        ArrowLeft ->
+                            Channel.moveTank channel -1
 
-                ArrowUp ->
-                    Channel.moveTurret 0.1
+                        ArrowUp ->
+                            Channel.moveTurret channel 0.1
 
-                ArrowDown ->
-                    Channel.moveTurret -0.1
+                        ArrowDown ->
+                            Channel.moveTurret channel -0.1
 
-                SpaceBar ->
-                    Channel.fire
+                        SpaceBar ->
+                            Channel.fire channel
+
+                Nothing ->
+                    Cmd.none
             )
 
         KeyUp key ->
             ( model
-            , case key of
-                ArrowRight ->
-                    Channel.moveTank 0
+            , case model.channel of
+                Just channel ->
+                    case key of
+                        ArrowRight ->
+                            Channel.moveTank channel 0
 
-                ArrowLeft ->
-                    Channel.moveTank 0
+                        ArrowLeft ->
+                            Channel.moveTank channel 0
 
-                ArrowUp ->
-                    Channel.moveTurret 0
+                        ArrowUp ->
+                            Channel.moveTurret channel 0
 
-                ArrowDown ->
-                    Channel.moveTurret 0
+                        ArrowDown ->
+                            Channel.moveTurret channel 0
 
-                SpaceBar ->
+                        SpaceBar ->
+                            Cmd.none
+
+                Nothing ->
                     Cmd.none
             )
 
         ResizeWindow w h ->
             ( { model | window = { width = w, height = h } }, Cmd.none )
 
-        ChannelMsg channelMsg ->
-            case channelMsg of
-                Channel.NoOp ->
+        GotSocket resp ->
+            case resp of
+                Ok socket ->
+                    ( model, Channel.join socket ("game:" ++ model.battleName) )
+
+                _ ->
                     ( model, Cmd.none )
 
-                Channel.Sync gameState ->
+        GotChannel resp ->
+            ( { model | channel = resp |> Result.toMaybe }, Cmd.none )
+
+        GotChannelResponse response ->
+            case response of
+                Ok (Channel.Sync gameState) ->
                     ( { model | gameState = gameState }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -140,7 +162,7 @@ subscriptions model =
         [ onKeyUp (keyDecoder KeyUp)
         , onKeyDown (keyDecoder KeyDown)
         , onResize ResizeWindow
-        , Channel.receive (Channel.responseToMsg >> ChannelMsg)
+        , Channel.subscribe GotSocket GotChannel GotChannelResponse
         ]
 
 
