@@ -5,24 +5,17 @@ import Data.String20 as String20 exposing (String20)
 
 type alias Session =
     { playerName : Maybe String20
-    , window : Window
     }
 
 
 type alias Flags =
     { playerName : Maybe String
-    , window : Window
     }
 
 
-type alias Window =
-    { width : Int, height : Int }
-
-
 init : Flags -> Session
-init { window, playerName } =
+init { playerName } =
     { playerName = playerName |> Maybe.andThen String20.create
-    , window = window
     }
 
 

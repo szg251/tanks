@@ -30,13 +30,7 @@ type alias Model =
 
 
 type alias Flags =
-    { playerName : Maybe String
-    , window : Window
-    }
-
-
-type alias Window =
-    { width : Int, height : Int }
+    { playerName : Maybe String }
 
 
 type Page

@@ -1,6 +1,7 @@
 module Page.Battle exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
+import Browser.Dom
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
 import Channel exposing (Channel, Socket)
 import Data.Session exposing (Session)
@@ -11,12 +12,13 @@ import Json.Decode as Decode exposing (Decoder)
 import Set exposing (Set)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
+import Task
 import Time exposing (Posix, every)
 
 
 type Msg
     = NoOp
-    | ResizeWindow Int Int
+    | FitWindowSize Window
     | KeyUp Key
     | KeyDown Key
     | GotSocket (Result Decode.Error Socket)
@@ -41,24 +43,37 @@ type alias Model =
     }
 
 
-type alias Flags =
-    { window : { width : Int, height : Int } }
+type alias Window =
+    { width : Int, height : Int }
+
+
+getWindowSize : Cmd Msg
+getWindowSize =
+    let
+        fromViewport { viewport } =
+            Window (round viewport.width) (round viewport.height)
+    in
+    Browser.Dom.getViewport
+        |> Task.perform (fromViewport >> FitWindowSize)
 
 
 init : Session -> String -> ( Model, Cmd Msg )
 init session battleName =
     ( { gameState = { tanks = [], bullets = [] }
-      , window = session.window
+      , window = { width = 1000, height = 600 }
       , battleName = battleName
       , session = session
       , channel = Nothing
       }
     , case session.playerName of
         Nothing ->
-            Cmd.none
+            getWindowSize
 
         Just name ->
-            Channel.connect (String20.value name)
+            Cmd.batch
+                [ Channel.connect (String20.value name)
+                , getWindowSize
+                ]
     )
 
 
@@ -133,8 +148,8 @@ update msg model =
                     Cmd.none
             )
 
-        ResizeWindow w h ->
-            ( { model | window = { width = w, height = h } }, Cmd.none )
+        FitWindowSize window ->
+            ( { model | window = window }, Cmd.none )
 
         GotSocket resp ->
             case resp of
@@ -161,7 +176,8 @@ subscriptions model =
     Sub.batch
         [ onKeyUp (keyDecoder KeyUp)
         , onKeyDown (keyDecoder KeyDown)
-        , onResize ResizeWindow
+        , onResize Window
+            |> Sub.map FitWindowSize
         , Channel.subscribe GotSocket GotChannel GotChannelResponse
         ]
 
