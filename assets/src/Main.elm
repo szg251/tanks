@@ -1,166 +1,205 @@
-module Main exposing (Model, Msg(..))
+module Main exposing (main)
 
-import Browser
-import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
-import Channel
-import GameState exposing (Bullet, GameState, Tank)
-import Html exposing (..)
-import Json.Decode as Decode exposing (Decoder)
-import Set exposing (Set)
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
-import Time exposing (Posix, every)
+import Browser exposing (Document, UrlRequest(..))
+import Browser.Navigation as Nav
+import Data.Session as Session exposing (Session)
+import Data.String20 as String20 exposing (String20)
+import Document
+import Html exposing (Html)
+import LocalStorage
+import Page.Battle as Battle
+import Page.ErrorPage as ErrorPage
+import Page.Lodge as Lodge
+import Route
+import Url exposing (Url)
 
 
 type Msg
-    = NoOp
-    | ResizeWindow Int Int
-    | KeyUp Key
-    | KeyDown Key
-    | ChannelMsg Channel.Msg
-
-
-type Key
-    = ArrowRight
-    | ArrowLeft
-    | ArrowUp
-    | ArrowDown
-    | SpaceBar
+    = UrlChanged Url
+    | UrlRequested UrlRequest
+    | GotLocalStorageValue LocalStorage.KeyValue
+    | LodgeMsg Lodge.Msg
+    | BattleMsg Battle.Msg
 
 
 type alias Model =
-    { gameState : GameState
-    , window : { width : Int, height : Int }
+    { page : Page
+    , navKey : Nav.Key
+    , session : Session
     }
 
 
 type alias Flags =
-    { window : { width : Int, height : Int } }
+    { playerName : Maybe String }
 
 
-init : Flags -> ( Model, Cmd Msg )
-init { window } =
-    ( { gameState = { tanks = [], bullets = [] }
-      , window = window
-      }
-    , Channel.join "game:lobby"
-    )
+type Page
+    = ErrorPage ErrorPage.Error
+    | Lodge Lodge.Model
+    | Battle Battle.Model
 
 
-view : Model -> Html Msg
-view model =
-    div []
-        [ svg
-            [ viewBox "0 0 1000 600"
-            , width <| String.fromInt (model.window.width - 10)
-            , height <| String.fromInt (model.window.height - 10)
-            ]
-            (GameState.viewField
-                :: List.map GameState.viewTank model.gameState.tanks
-                ++ List.map GameState.viewBullet model.gameState.bullets
+init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
+    let
+        session =
+            Session.init navKey flags.playerName
+    in
+    case initPageAtUrl session url of
+        Just ( page, cmd ) ->
+            ( { page = page
+              , navKey = navKey
+              , session = session
+              }
+            , Cmd.batch [ cmd, LocalStorage.getItem "player_name" ]
             )
-        ]
+
+        Nothing ->
+            ( { page = ErrorPage ErrorPage.NotFound
+              , navKey = navKey
+              , session = session
+              }
+            , LocalStorage.getItem "player_name"
+            )
+
+
+view : Model -> Document Msg
+view model =
+    case model.page of
+        Lodge subModel ->
+            Lodge.view subModel
+                |> Document.map LodgeMsg
+
+        Battle subModel ->
+            Battle.view subModel
+                |> Document.map BattleMsg
+
+        ErrorPage error ->
+            ErrorPage.view error
+
+
+initPageAtUrl : Session -> Url -> Maybe ( Page, Cmd Msg )
+initPageAtUrl session url =
+    let
+        routeToPageCmd route =
+            case route of
+                Route.Lodge ->
+                    Lodge.init session
+                        |> Tuple.mapBoth
+                            Lodge
+                            (Cmd.map LodgeMsg)
+
+                Route.Battle battleName ->
+                    Battle.init session battleName
+                        |> Tuple.mapBoth
+                            Battle
+                            (Cmd.map BattleMsg)
+    in
+    Maybe.map routeToPageCmd (Route.parseUrl url)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
+        UrlRequested urlRequest ->
+            case urlRequest of
+                Internal url ->
+                    ( model
+                    , Nav.pushUrl model.navKey (Url.toString url)
+                    )
 
-        KeyDown key ->
-            ( model
-            , case key of
-                ArrowRight ->
-                    Channel.moveTank 1
+                External url ->
+                    ( model, Nav.load url )
 
-                ArrowLeft ->
-                    Channel.moveTank -1
+        UrlChanged url ->
+            case initPageAtUrl model.session url of
+                Just ( page, cmd ) ->
+                    ( { model | page = page }, cmd )
 
-                ArrowUp ->
-                    Channel.moveTurret 0.1
-
-                ArrowDown ->
-                    Channel.moveTurret -0.1
-
-                SpaceBar ->
-                    Channel.fire
-            )
-
-        KeyUp key ->
-            ( model
-            , case key of
-                ArrowRight ->
-                    Channel.moveTank 0
-
-                ArrowLeft ->
-                    Channel.moveTank 0
-
-                ArrowUp ->
-                    Channel.moveTurret 0
-
-                ArrowDown ->
-                    Channel.moveTurret 0
-
-                SpaceBar ->
-                    Cmd.none
-            )
-
-        ResizeWindow w h ->
-            ( { model | window = { width = w, height = h } }, Cmd.none )
-
-        ChannelMsg channelMsg ->
-            case channelMsg of
-                Channel.NoOp ->
+                Nothing ->
                     ( model, Cmd.none )
 
-                Channel.Sync gameState ->
-                    ( { model | gameState = gameState }, Cmd.none )
+        GotLocalStorageValue { key, value } ->
+            case key of
+                "player_name" ->
+                    updateSession (Session.setPlayerName value model.session) model
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LodgeMsg subMsg ->
+            case model.page of
+                Lodge subModel ->
+                    let
+                        ( newSubModel, cmd ) =
+                            Lodge.update subMsg subModel
+                    in
+                    ( { model | page = Lodge newSubModel }, cmd |> Cmd.map LodgeMsg )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        BattleMsg subMsg ->
+            case model.page of
+                Battle subModel ->
+                    let
+                        ( newSubModel, cmd ) =
+                            Battle.update subMsg subModel
+                    in
+                    ( { model | page = Battle newSubModel }, cmd |> Cmd.map BattleMsg )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+updateSession : Session -> Model -> ( Model, Cmd Msg )
+updateSession session model =
+    let
+        page =
+            case model.page of
+                Battle subModel ->
+                    Battle <| Session.updateSession session subModel
+
+                Lodge subModel ->
+                    Lodge <| Session.updateSession session subModel
+
+                ErrorPage _ ->
+                    model.page
+    in
+    ( { model | page = page, session = session }
+    , Cmd.none
+    )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ onKeyUp (keyDecoder KeyUp)
-        , onKeyDown (keyDecoder KeyDown)
-        , onResize ResizeWindow
-        , Channel.receive (Channel.responseToMsg >> ChannelMsg)
-        ]
-
-
-keyDecoder : (Key -> Msg) -> Decoder Msg
-keyDecoder toMsg =
     let
-        toKey key =
-            case key of
-                "ArrowUp" ->
-                    Decode.succeed ArrowUp
+        pageSub =
+            case model.page of
+                Lodge subModel ->
+                    Lodge.subscriptions subModel
+                        |> Sub.map LodgeMsg
 
-                "ArrowDown" ->
-                    Decode.succeed ArrowDown
+                Battle subModel ->
+                    Battle.subscriptions subModel
+                        |> Sub.map BattleMsg
 
-                "ArrowLeft" ->
-                    Decode.succeed ArrowLeft
-
-                "ArrowRight" ->
-                    Decode.succeed ArrowRight
-
-                " " ->
-                    Decode.succeed SpaceBar
-
-                _ ->
-                    Decode.fail "Not a controller key"
+                ErrorPage _ ->
+                    Sub.none
     in
-    Decode.field "key" Decode.string
-        |> Decode.andThen toKey
-        |> Decode.map toMsg
+    Sub.batch
+        [ LocalStorage.subscribe GotLocalStorageValue
+        , pageSub
+        ]
 
 
 main : Program Flags Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlRequest = UrlRequested
+        , onUrlChange = UrlChanged
         }
