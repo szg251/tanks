@@ -2,8 +2,11 @@ module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Navigation as Nav
+import Data.Session as Session exposing (Session)
+import Data.String20 as String20 exposing (String20)
 import Document
 import Html exposing (Html)
+import LocalStorage
 import Page.Battle as Battle
 import Page.ErrorPage as ErrorPage
 import Page.Lodge as Lodge
@@ -14,6 +17,7 @@ import Url exposing (Url)
 type Msg
     = UrlChanged Url
     | UrlRequested UrlRequest
+    | GotLocalStorageValue LocalStorage.KeyValue
     | LodgeMsg Lodge.Msg
     | BattleMsg Battle.Msg
 
@@ -21,7 +25,18 @@ type Msg
 type alias Model =
     { page : Page
     , navKey : Nav.Key
+    , session : Session
     }
+
+
+type alias Flags =
+    { playerName : Maybe String
+    , window : Window
+    }
+
+
+type alias Window =
+    { width : Int, height : Int }
 
 
 type Page
@@ -30,14 +45,28 @@ type Page
     | Battle Battle.Model
 
 
-init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url navKey =
-    case urlToPage url of
+init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
+    let
+        session =
+            Session.init flags
+    in
+    case initPageAtUrl session url of
         Just ( page, cmd ) ->
-            ( { page = page, navKey = navKey }, cmd )
+            ( { page = page
+              , navKey = navKey
+              , session = session
+              }
+            , Cmd.batch [ cmd, LocalStorage.getItem "player_name" ]
+            )
 
         Nothing ->
-            ( { page = ErrorPage ErrorPage.NotFound, navKey = navKey }, Cmd.none )
+            ( { page = ErrorPage ErrorPage.NotFound
+              , navKey = navKey
+              , session = session
+              }
+            , LocalStorage.getItem "player_name"
+            )
 
 
 view : Model -> Document Msg
@@ -55,19 +84,19 @@ view model =
             ErrorPage.view error
 
 
-urlToPage : Url -> Maybe ( Page, Cmd Msg )
-urlToPage url =
+initPageAtUrl : Session -> Url -> Maybe ( Page, Cmd Msg )
+initPageAtUrl session url =
     let
         routeToPageCmd route =
             case route of
                 Route.Lodge ->
-                    Lodge.init
+                    Lodge.init session
                         |> Tuple.mapBoth
                             Lodge
                             (Cmd.map LodgeMsg)
 
                 Route.Battle battleName ->
-                    Battle.init battleName
+                    Battle.init session battleName
                         |> Tuple.mapBoth
                             Battle
                             (Cmd.map BattleMsg)
@@ -89,11 +118,19 @@ update msg model =
                     ( model, Nav.load url )
 
         UrlChanged url ->
-            case urlToPage url of
+            case initPageAtUrl model.session url of
                 Just ( page, cmd ) ->
                     ( { model | page = page }, cmd )
 
                 Nothing ->
+                    ( model, Cmd.none )
+
+        GotLocalStorageValue { key, value } ->
+            case key of
+                "player_name" ->
+                    updateSession (Session.setPlayerName value model.session) model
+
+                _ ->
                     ( model, Cmd.none )
 
         LodgeMsg subMsg ->
@@ -121,22 +158,48 @@ update msg model =
                     ( model, Cmd.none )
 
 
+updateSession : Session -> Model -> ( Model, Cmd Msg )
+updateSession session model =
+    let
+        page =
+            case model.page of
+                Battle subModel ->
+                    Battle <| Session.updateSession session subModel
+
+                Lodge subModel ->
+                    Lodge <| Session.updateSession session subModel
+
+                ErrorPage _ ->
+                    model.page
+    in
+    ( { model | page = page, session = session }
+    , Cmd.none
+    )
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.page of
-        Lodge subModel ->
-            Lodge.subscriptions subModel
-                |> Sub.map LodgeMsg
+    let
+        pageSub =
+            case model.page of
+                Lodge subModel ->
+                    Lodge.subscriptions subModel
+                        |> Sub.map LodgeMsg
 
-        Battle subModel ->
-            Battle.subscriptions subModel
-                |> Sub.map BattleMsg
+                Battle subModel ->
+                    Battle.subscriptions subModel
+                        |> Sub.map BattleMsg
 
-        ErrorPage _ ->
-            Sub.none
+                ErrorPage _ ->
+                    Sub.none
+    in
+    Sub.batch
+        [ LocalStorage.subscribe GotLocalStorageValue
+        , pageSub
+        ]
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init

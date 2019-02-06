@@ -1,5 +1,6 @@
 port module Channel exposing
     ( Msg(..)
+    , connect
     , fire
     , join
     , moveTank
@@ -12,6 +13,9 @@ port module Channel exposing
 import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
+
+
+port connect : String -> Cmd msg
 
 
 port join : String -> Cmd msg

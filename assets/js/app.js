@@ -22,7 +22,15 @@ import { Elm } from "../src/Main.elm"
 
 const app = Elm.Main.init({
   node: document.getElementById("elm-node"),
-  flags: { window: { width: window.innerWidth, height: window.innerHeight } }
+  flags: {
+    playerName: localStorage.getItem("player_name"),
+    window: { width: window.innerWidth, height: window.innerHeight }
+  }
+})
+
+app.ports.connect.subscribe(playerName => {
+  const resp = socket.connect({ user_id: playerName })
+  console.log(resp)
 })
 
 app.ports.join.subscribe(topic => {
@@ -44,4 +52,16 @@ app.ports.join.subscribe(topic => {
     .receive("error", resp => {
       console.log("Unable to join", resp)
     })
+})
+
+app.ports.setItem.subscribe(({ key, value }) => {
+  localStorage.setItem(key, value)
+  app.ports.localStorageSubscribe.send({ key, value })
+})
+
+app.ports.getItem.subscribe(key => {
+  const value = localStorage.getItem(key)
+  if (value) {
+    app.ports.localStorageSubscribe.send({ key, value })
+  }
 })

@@ -2,11 +2,13 @@ module Page.Lodge exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Data.BattleSummary as BattleSummary exposing (BattleSummary)
+import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Html exposing (..)
 import Html.Attributes exposing (disabled, href, value)
 import Html.Events exposing (..)
 import Http
+import LocalStorage
 import RemoteData exposing (RemoteData(..), WebData)
 import Request.Lodge
 import Route exposing (Route(..))
@@ -23,34 +25,32 @@ type Msg
 
 
 type alias Model =
-    { playerName : PlayerName
+    { newPlayerName : String20
     , newBattleName : String20
     , battles : WebData (List BattleSummary)
+    , session : Session
     }
 
 
-type PlayerName
-    = EditablePlayerName String20
-    | FixedPlayerName String20
+init : Session -> ( Model, Cmd Msg )
+init session =
+    let
+        playerName =
+            case session.playerName of
+                Just name ->
+                    name
 
-
-isFixed : PlayerName -> Bool
-isFixed playerName =
-    case playerName of
-        FixedPlayerName _ ->
-            True
-
-        _ ->
-            False
-
-
-init : ( Model, Cmd Msg )
-init =
-    ( { playerName = EditablePlayerName String20.empty
+                Nothing ->
+                    String20.empty
+    in
+    ( { newPlayerName = playerName
       , newBattleName = String20.empty
       , battles = NotAsked
+      , session = session
       }
-    , Request.Lodge.requestSummaries GotSummaries
+    , Cmd.batch
+        [ Request.Lodge.requestSummaries GotSummaries
+        ]
     )
 
 
@@ -61,9 +61,9 @@ view model =
         case model.battles of
             Success battles ->
                 [ text "Lodge"
-                , viewUserForm model.playerName
-                , viewCreateBattleForm model.playerName model.newBattleName
-                , div [] (List.map (viewBattleSummary model.playerName) battles)
+                , viewUserForm model.session model.newPlayerName
+                , viewCreateBattleForm model.session model.newBattleName
+                , div [] (List.map (viewBattleSummary model.session) battles)
                 ]
 
             _ ->
@@ -71,26 +71,26 @@ view model =
     }
 
 
-viewUserForm : PlayerName -> Html Msg
-viewUserForm playerName =
-    case playerName of
-        EditablePlayerName name ->
+viewUserForm : Session -> String20 -> Html Msg
+viewUserForm session playerName =
+    case session.playerName of
+        Nothing ->
             form [ onSubmit FixName ]
-                [ input [ onInput InputPlayerName, value (String20.value name) ] []
+                [ input [ onInput InputPlayerName, value (String20.value playerName) ] []
                 , button [] [ text "OK" ]
                 ]
 
-        FixedPlayerName name ->
+        Just name ->
             div [] [ text (String20.value name) ]
 
 
-viewCreateBattleForm : PlayerName -> String20 -> Html Msg
-viewCreateBattleForm playerName battleName =
-    case playerName of
-        EditablePlayerName _ ->
+viewCreateBattleForm : Session -> String20 -> Html Msg
+viewCreateBattleForm session battleName =
+    case session.playerName of
+        Nothing ->
             span [] []
 
-        FixedPlayerName ownerName ->
+        Just ownerName ->
             form [ onSubmit (RequestStartBattle battleName ownerName) ]
                 [ input
                     [ onInput InputBattleName
@@ -101,15 +101,16 @@ viewCreateBattleForm playerName battleName =
                 ]
 
 
-viewBattleSummary : PlayerName -> BattleSummary -> Html Msg
-viewBattleSummary playerName { name, playerCount } =
+viewBattleSummary : Session -> BattleSummary -> Html Msg
+viewBattleSummary session { name, playerCount } =
     div []
         [ text (name ++ " " ++ String.fromInt playerCount)
-        , if isFixed playerName then
-            a [ href <| Route.toPath (Battle name) ] [ text "Join" ]
+        , case session.playerName of
+            Nothing ->
+                span [] []
 
-          else
-            span [] []
+            Just _ ->
+                a [ href <| Route.toPath (Battle name) ] [ text "Join" ]
         ]
 
 
@@ -126,11 +127,11 @@ update msg model =
             ( { model | battles = RemoteData.map2 (::) response model.battles }, Cmd.none )
 
         InputPlayerName name ->
-            case ( model.playerName, String20.create name ) of
-                ( EditablePlayerName _, Just validName ) ->
-                    ( { model | playerName = EditablePlayerName validName }, Cmd.none )
+            case String20.create name of
+                Just validName ->
+                    ( { model | newPlayerName = validName }, Cmd.none )
 
-                _ ->
+                Nothing ->
                     ( model, Cmd.none )
 
         InputBattleName name ->
@@ -142,12 +143,7 @@ update msg model =
                     ( model, Cmd.none )
 
         FixName ->
-            case model.playerName of
-                EditablePlayerName name ->
-                    ( { model | playerName = FixedPlayerName name }, Cmd.none )
-
-                FixedPlayerName _ ->
-                    ( model, Cmd.none )
+            ( model, LocalStorage.setItem { key = "player_name", value = String20.value model.newPlayerName } )
 
         RequestStartBattle playerName battleName ->
             ( model

@@ -3,6 +3,8 @@ module Page.Battle exposing (Model, Msg, init, subscriptions, update, view)
 import Browser exposing (Document)
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
 import Channel
+import Data.Session exposing (Session)
+import Data.String20 as String20 exposing (String20)
 import GameState exposing (Bullet, GameState, Tank)
 import Html exposing (..)
 import Json.Decode as Decode exposing (Decoder)
@@ -32,6 +34,7 @@ type alias Model =
     { gameState : GameState
     , window : { width : Int, height : Int }
     , battleName : String
+    , session : Session
     }
 
 
@@ -39,13 +42,22 @@ type alias Flags =
     { window : { width : Int, height : Int } }
 
 
-init : String -> ( Model, Cmd Msg )
-init battleName =
+init : Session -> String -> ( Model, Cmd Msg )
+init session battleName =
     ( { gameState = { tanks = [], bullets = [] }
-      , window = { width = 1000, height = 600 }
+      , window = session.window
       , battleName = battleName
+      , session = session
       }
-    , Channel.join ("game:" ++ battleName)
+    , case session.playerName of
+        Nothing ->
+            Cmd.none
+
+        Just name ->
+            Cmd.batch
+                [ Channel.connect (String20.value name)
+                , Channel.join ("game:" ++ battleName)
+                ]
     )
 
 
