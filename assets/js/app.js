@@ -22,26 +22,58 @@ import { Elm } from "../src/Main.elm"
 
 const app = Elm.Main.init({
   node: document.getElementById("elm-node"),
-  flags: { window: { width: window.innerWidth, height: window.innerHeight } }
+  flags: {
+    playerName: localStorage.getItem("player_name")
+  }
 })
 
-app.ports.join.subscribe(topic => {
-  const channel = socket.channel(topic, {})
-  channel
-    .join()
-    .receive("ok", resp => {
-      console.log("Joined successfully", resp)
-      app.ports.push.subscribe(({ event, payload }) => {
-        channel.push(event, payload)
-      })
-      channel.on("sync", payload => {
-        app.ports.receive.send({
-          event: "sync",
-          payload
+app.ports.channelFromElm.subscribe(({ msg, payload }) => {
+  switch (msg) {
+    case "connect": {
+      socket.connect({ user_id: payload.playerName })
+      app.ports.channelToElm.send({ msg: "got_socket", payload: { socket } })
+      return
+    }
+
+    case "join": {
+      const channel = payload.socket.channel(payload.topic)
+      channel.join().receive("ok", _ => {
+        channel.on("sync", value => {
+          app.ports.channelToElm.send({
+            msg: "got_channel_event",
+            payload: {
+              event: "sync",
+              value
+            }
+          })
         })
       })
-    })
-    .receive("error", resp => {
-      console.log("Unable to join", resp)
-    })
+      app.ports.channelToElm.send({ msg: "got_channel", payload: { channel } })
+      return
+    }
+
+    case "push": {
+      const channel = payload.channel
+      channel.push(payload.event, payload.value)
+      app.ports.channelToElm.send({ msg: "got_channel", payload: { channel } })
+      return
+    }
+  }
+})
+
+app.ports.setItem.subscribe(({ key, value }) => {
+  localStorage.setItem(key, value)
+  app.ports.localStorageSubscribe.send({ key, value })
+})
+
+app.ports.removeItem.subscribe(key => {
+  localStorage.removeItem(key)
+  app.ports.localStorageSubscribe.send({ key, value: null })
+})
+
+app.ports.getItem.subscribe(key => {
+  const value = localStorage.getItem(key)
+  if (value) {
+    app.ports.localStorageSubscribe.send({ key, value })
+  }
 })

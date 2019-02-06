@@ -1,24 +1,27 @@
 defmodule Tanks.GameLogic.TankSupervisor do
   use DynamicSupervisor
 
-  def start_link(_arg) do
-    DynamicSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(opts) do
+    DynamicSupervisor.start_link(__MODULE__, :ok, opts)
   end
 
   def init(:ok) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def add_tank() do
-    DynamicSupervisor.start_child(__MODULE__, Tanks.GameLogic.Tank)
+  def add_tank(tank_sup_pid) do
+    DynamicSupervisor.start_child(tank_sup_pid, Tanks.GameLogic.Tank)
   end
 
-  @spec remove_tank(pid()) :: :ok | {:error, :not_found}
-  def remove_tank(tank_pid) do
-    DynamicSupervisor.terminate_child(__MODULE__, tank_pid)
+  def remove_tank(tank_sup_pid, tank_pid) do
+    DynamicSupervisor.terminate_child(tank_sup_pid, tank_pid)
   end
 
-  def get_tanks do
-    DynamicSupervisor.which_children(__MODULE__)
+  def get_tanks(tank_sup_pid) do
+    DynamicSupervisor.which_children(tank_sup_pid)
+  end
+
+  def count_tanks(tank_sup_pid) do
+    DynamicSupervisor.count_children(tank_sup_pid)
   end
 end
