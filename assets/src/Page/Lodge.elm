@@ -4,9 +4,8 @@ import Browser exposing (Document)
 import Data.BattleSummary as BattleSummary exposing (BattleSummary)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
-import Html exposing (..)
-import Html.Attributes exposing (disabled, href, value)
-import Html.Events exposing (..)
+import Element exposing (..)
+import Element.Input as Input
 import Http
 import LocalStorage
 import RemoteData exposing (RemoteData(..), WebData)
@@ -58,59 +57,95 @@ view : Model -> Document Msg
 view model =
     { title = "Lodge"
     , body =
-        case model.battles of
-            Success battles ->
-                [ text "Lodge"
-                , viewUserForm model.session model.newPlayerName
-                , viewCreateBattleForm model.session model.newBattleName
-                , div [] (List.map (viewBattleSummary model.session) battles)
-                ]
+        [ Element.layout []
+            (case model.battles of
+                Success battles ->
+                    Element.column [ width (px 500), centerX, spacing 20 ]
+                        [ viewHeader
+                        , viewUserForm model.session model.newPlayerName
+                        , viewCreateBattleForm model.session model.newBattleName
+                        , viewBattles model.session battles
+                        ]
 
-            _ ->
-                [ text "Lodge" ]
+                _ ->
+                    viewHeader
+            )
+        ]
     }
 
 
-viewUserForm : Session -> String20 -> Html Msg
+viewHeader : Element Msg
+viewHeader =
+    row [ width fill, height (px 50) ] [ el [ centerX, centerY ] (text "Lodge") ]
+
+
+viewUserForm : Session -> String20 -> Element Msg
 viewUserForm session playerName =
     case session.playerName of
         Nothing ->
-            form [ onSubmit FixName ]
-                [ input [ onInput InputPlayerName, value (String20.value playerName) ] []
-                , button [] [ text "OK" ]
+            row []
+                [ Input.text [ centerX ]
+                    { onChange = InputPlayerName
+                    , text = String20.value playerName
+                    , placeholder = Nothing
+                    , label = Input.labelLeft [ width (px 150) ] (text "Player name:")
+                    }
+                , Input.button [] { onPress = Just FixName, label = text "OK" }
                 ]
 
         Just name ->
-            div [] [ text (String20.value name) ]
+            row [] [ el [ width (px 150) ] (text "Player name:"), el [] (text <| String20.value name) ]
 
 
-viewCreateBattleForm : Session -> String20 -> Html Msg
+viewCreateBattleForm : Session -> String20 -> Element Msg
 viewCreateBattleForm session battleName =
     case session.playerName of
         Nothing ->
-            span [] []
+            Element.none
 
         Just ownerName ->
-            form [ onSubmit (RequestStartBattle battleName ownerName) ]
-                [ input
-                    [ onInput InputBattleName
-                    , value (String20.value battleName)
-                    ]
-                    []
-                , button [] [ text "OK" ]
+            row [ spacing 10 ]
+                [ Input.text []
+                    { onChange = InputBattleName
+                    , text = String20.value battleName
+                    , placeholder = Nothing
+                    , label = Input.labelLeft [ width (px 150) ] (text "Battle name:")
+                    }
+                , Input.button []
+                    { onPress = Just (RequestStartBattle battleName ownerName)
+                    , label = text "OK"
+                    }
                 ]
 
 
-viewBattleSummary : Session -> BattleSummary -> Html Msg
-viewBattleSummary session { name, playerCount } =
-    div []
-        [ text (name ++ " " ++ String.fromInt playerCount)
-        , case session.playerName of
-            Nothing ->
-                span [] []
+viewBattles : Session -> List BattleSummary -> Element Msg
+viewBattles session battles =
+    let
+        columns =
+            [ { header = text "Name"
+              , width = fill
+              , view = .name >> text
+              }
+            , { header = text "Players"
+              , width = shrink
+              , view = .playerCount >> String.fromInt >> text
+              }
+            , { header = Element.none
+              , width = shrink
+              , view =
+                    \{ name } ->
+                        case session.playerName of
+                            Nothing ->
+                                Element.none
 
-            Just _ ->
-                a [ href <| Route.toPath (Battle name) ] [ text "Join" ]
+                            Just _ ->
+                                link [ alignRight ] { url = Route.toPath (Battle name), label = text "Join" }
+              }
+            ]
+    in
+    column [ width fill ]
+        [ el [ centerX ] (text "Battles")
+        , table [ spacing 10 ] { data = battles, columns = columns }
         ]
 
 
