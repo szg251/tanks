@@ -66,6 +66,11 @@ app.ports.setItem.subscribe(({ key, value }) => {
   app.ports.localStorageSubscribe.send({ key, value })
 })
 
+app.ports.removeItem.subscribe(key => {
+  localStorage.removeItem(key)
+  app.ports.localStorageSubscribe.send({ key, value: null })
+})
+
 app.ports.getItem.subscribe(key => {
   const value = localStorage.getItem(key)
   if (value) {

@@ -19,7 +19,8 @@ type Msg
     | GotNewBattle (WebData BattleSummary)
     | InputPlayerName String
     | InputBattleName String
-    | FixName
+    | SaveName
+    | EditName
     | RequestStartBattle String20 String20
 
 
@@ -83,18 +84,22 @@ viewUserForm : Session -> String20 -> Element Msg
 viewUserForm session playerName =
     case session.playerName of
         Nothing ->
-            row []
+            row [ width fill, spacing 10 ]
                 [ Input.text [ centerX ]
                     { onChange = InputPlayerName
                     , text = String20.value playerName
                     , placeholder = Nothing
-                    , label = Input.labelLeft [ width (px 150) ] (text "Player name:")
+                    , label = Input.labelLeft [ width (px 150), centerY ] (text "Player name:")
                     }
-                , Input.button [] { onPress = Just FixName, label = text "OK" }
+                , Input.button [ alignRight ] { onPress = Just SaveName, label = text "OK" }
                 ]
 
         Just name ->
-            row [] [ el [ width (px 150) ] (text "Player name:"), el [] (text <| String20.value name) ]
+            row [ width fill, spacing 10 ]
+                [ el [ width (px 150), centerY ] (text "Player name:")
+                , el [] (text <| String20.value name)
+                , Input.button [ alignRight ] { onPress = Just EditName, label = text "Edit" }
+                ]
 
 
 viewCreateBattleForm : Session -> String20 -> Element Msg
@@ -104,14 +109,14 @@ viewCreateBattleForm session battleName =
             Element.none
 
         Just ownerName ->
-            row [ spacing 10 ]
+            row [ width fill, spacing 10 ]
                 [ Input.text []
                     { onChange = InputBattleName
                     , text = String20.value battleName
                     , placeholder = Nothing
-                    , label = Input.labelLeft [ width (px 150) ] (text "Battle name:")
+                    , label = Input.labelLeft [ width (px 150), centerY ] (text "Battle name:")
                     }
-                , Input.button []
+                , Input.button [ alignRight ]
                     { onPress = Just (RequestStartBattle battleName ownerName)
                     , label = text "OK"
                     }
@@ -177,8 +182,16 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-        FixName ->
-            ( model, LocalStorage.setItem { key = "player_name", value = String20.value model.newPlayerName } )
+        SaveName ->
+            ( model
+            , LocalStorage.setItem
+                { key = "player_name"
+                , value = Just (String20.value model.newPlayerName)
+                }
+            )
+
+        EditName ->
+            ( model, LocalStorage.removeItem "player_name" )
 
         RequestStartBattle playerName battleName ->
             ( model

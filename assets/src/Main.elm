@@ -43,7 +43,7 @@ init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
     let
         session =
-            Session.init flags
+            Session.init navKey flags.playerName
     in
     case initPageAtUrl session url of
         Just ( page, cmd ) ->
