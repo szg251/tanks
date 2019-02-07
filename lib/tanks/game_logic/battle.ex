@@ -28,8 +28,8 @@ defmodule Tanks.GameLogic.Battle do
     true
 
   """
-  def create_tank(game_pid, tank_id) do
-    GenServer.call(game_pid, {:create_tank, tank_id})
+  def create_tank(game_pid, player_name) do
+    GenServer.call(game_pid, {:create_tank, player_name})
   end
 
   @doc """
@@ -49,8 +49,8 @@ defmodule Tanks.GameLogic.Battle do
     :ok
 
   """
-  def remove_tank(game_pid, tank_id) do
-    GenServer.call(game_pid, {:remove_tank, tank_id})
+  def remove_tank(game_pid, player_name) do
+    GenServer.call(game_pid, {:remove_tank, player_name})
   end
 
   @doc """
@@ -92,8 +92,8 @@ defmodule Tanks.GameLogic.Battle do
     true
 
   """
-  def get_pid(game_pid, tank_id) do
-    GenServer.call(game_pid, {:get_pid, tank_id})
+  def get_pid(game_pid, player_name) do
+    GenServer.call(game_pid, {:get_pid, player_name})
   end
 
   @doc """
@@ -131,8 +131,8 @@ defmodule Tanks.GameLogic.Battle do
     [%Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}]
 
   """
-  def fire(game_pid, tank_id) do
-    GenServer.cast(game_pid, {:fire, tank_id})
+  def fire(game_pid, player_name) do
+    GenServer.cast(game_pid, {:fire, player_name})
   end
 
   defp schedule_tick() do
@@ -185,12 +185,12 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   # Create a new tank
-  def handle_call({:create_tank, tank_id}, _from, state) do
-    if !Map.has_key?(state.tanks, tank_id) do
+  def handle_call({:create_tank, player_name}, _from, state) do
+    if !Map.has_key?(state.tanks, player_name) do
       {:ok, tank_pid} = Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid)
       Process.monitor(tank_pid)
 
-      newState = %Battle{state | tanks: state.tanks |> Map.put_new(tank_id, tank_pid)}
+      newState = %Battle{state | tanks: state.tanks |> Map.put_new(player_name, tank_pid)}
       {:reply, {:ok, tank_pid}, newState}
     else
       {:reply, {:error, "Already existing"}, state}
@@ -198,10 +198,10 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   # Remove tank
-  def handle_call({:remove_tank, tank_id}, _from, state) do
-    if Map.has_key?(state.tanks, tank_id) do
-      tank_pid = Map.fetch!(state.tanks, tank_id)
-      tanks = Map.delete(state.tanks, tank_id)
+  def handle_call({:remove_tank, player_name}, _from, state) do
+    if Map.has_key?(state.tanks, player_name) do
+      tank_pid = Map.fetch!(state.tanks, player_name)
+      tanks = Map.delete(state.tanks, player_name)
       Tanks.GameLogic.TankSupervisor.remove_tank(state.tank_sup_pid, tank_pid)
       {:reply, :ok, %Battle{state | tanks: tanks}}
     else
@@ -220,8 +220,8 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   # Get tank PID
-  def handle_call({:get_pid, tank_id}, _from, state) do
-    {:reply, state.tanks |> Map.fetch(tank_id), state}
+  def handle_call({:get_pid, player_name}, _from, state) do
+    {:reply, state.tanks |> Map.fetch(player_name), state}
   end
 
   # Count tanks
@@ -231,8 +231,8 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   # Fire a bullet
-  def handle_cast({:fire, tank_id}, state) do
-    case Map.fetch(state.tanks, tank_id) do
+  def handle_cast({:fire, player_name}, state) do
+    case Map.fetch(state.tanks, player_name) do
       {:ok, tank_pid} ->
         case Tank.fire(tank_pid) do
           {:ok, bullet} -> {:noreply, %Battle{state | bullets: [bullet | state.bullets]}}

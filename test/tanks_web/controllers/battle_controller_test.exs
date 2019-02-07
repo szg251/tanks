@@ -6,6 +6,11 @@ defmodule TanksWeb.BattleControllerTest do
   @create_attrs %{"name" => "test_name", "owner_name" => "test_owner"}
   @invalid_attrs %{"name" => 123, "owner_name" => "test"}
 
+  def fixture(:player) do
+    {:ok, player} = Lodge.create_player("test_owner")
+    :ok
+  end
+
   def fixture(:battle) do
     {:ok, battle} = Lodge.start_battle("test_name", "test_owner")
     battle
@@ -25,6 +30,8 @@ defmodule TanksWeb.BattleControllerTest do
   end
 
   describe "create battle" do
+    setup [:create_player]
+
     test "renders battle when data is valid", %{conn: conn} do
       conn = post(conn, Routes.battle_path(conn, :create), battle: @create_attrs)
 
@@ -78,7 +85,12 @@ defmodule TanksWeb.BattleControllerTest do
     end
   end
 
+  defp create_player(_) do
+    fixture(:player)
+  end
+
   defp create_battle(_) do
+    fixture(:player)
     battle = fixture(:battle)
     {:ok, battle: battle}
   end
