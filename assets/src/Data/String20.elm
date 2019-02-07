@@ -1,4 +1,4 @@
-module Data.String20 exposing (String20, create, empty, value)
+module Data.String20 exposing (String20, create, empty, length, value)
 
 
 type String20
@@ -14,11 +14,16 @@ create string =
         Nothing
 
 
+empty : String20
+empty =
+    String20 ""
+
+
 value : String20 -> String
 value (String20 string) =
     string
 
 
-empty : String20
-empty =
-    String20 ""
+length : String20 -> Int
+length (String20 string) =
+    String.length string

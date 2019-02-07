@@ -91,14 +91,23 @@ viewUserForm session playerName =
                     , placeholder = Nothing
                     , label = Input.labelLeft [ width (px 150), centerY ] (text "Player name:")
                     }
-                , Input.button [ alignRight ] { onPress = Just SaveName, label = text "OK" }
+                , Input.button [ alignRight ]
+                    { onPress =
+                        if String20.length playerName > 0 then
+                            Just SaveName
+
+                        else
+                            Nothing
+                    , label = text "OK"
+                    }
                 ]
 
         Just name ->
             row [ width fill, spacing 10 ]
                 [ el [ width (px 150), centerY ] (text "Player name:")
                 , el [] (text <| String20.value name)
-                , Input.button [ alignRight ] { onPress = Just EditName, label = text "Edit" }
+                , Input.button [ alignRight ]
+                    { onPress = Just EditName, label = text "Edit" }
                 ]
 
 
@@ -117,7 +126,12 @@ viewCreateBattleForm session battleName =
                     , label = Input.labelLeft [ width (px 150), centerY ] (text "Battle name:")
                     }
                 , Input.button [ alignRight ]
-                    { onPress = Just (RequestStartBattle battleName ownerName)
+                    { onPress =
+                        if String20.length battleName > 0 then
+                            Just (RequestStartBattle battleName ownerName)
+
+                        else
+                            Nothing
                     , label = text "OK"
                     }
                 ]
@@ -164,7 +178,12 @@ update msg model =
             ( { model | battles = response }, Cmd.none )
 
         GotNewBattle response ->
-            ( { model | battles = RemoteData.map2 (::) response model.battles }, Cmd.none )
+            case response of
+                Success newBattle ->
+                    ( { model | battles = RemoteData.map ((::) newBattle) model.battles }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         InputPlayerName name ->
             case String20.create name of
