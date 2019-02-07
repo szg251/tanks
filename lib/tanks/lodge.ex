@@ -129,6 +129,31 @@ defmodule Tanks.Lodge do
     GenServer.call(__MODULE__, {:create_player, name})
   end
 
+  @doc """
+  List all players
+
+  ## Example
+
+    iex> Tanks.Lodge.create_player("owner")
+    iex> Tanks.Lodge.list_players()
+    ["owner"]
+
+  """
+  def list_players do
+    GenServer.call(__MODULE__, :list_players)
+  end
+
+  @doc """
+  Remove a player
+
+  ## Example
+
+    iex> Tanks.Lodge.create_player("owner")
+    iex> Tanks.Lodge.remove_player("owner")
+    iex> Tanks.Lodge.list_players()
+    []
+
+  """
   def remove_player(name) do
     GenServer.cast(__MODULE__, {:remove_player, name})
   end
@@ -150,7 +175,7 @@ defmodule Tanks.Lodge do
              do: {:ok, owner_name},
              else: {:error, "owner does not exits"}
            ) do
-      summary = BattleSummary.create(valid_name, pid, owner_name)
+      summary = BattleSummary.create(valid_name, pid, existing_player)
 
       new_state = %Lodge{
         state
@@ -189,6 +214,10 @@ defmodule Tanks.Lodge do
       |> Enum.map(fn {name, {pid, owner_name}} -> BattleSummary.create(name, pid, owner_name) end)
 
     {:reply, list, state}
+  end
+
+  def handle_call(:list_players, _from, state) do
+    {:reply, MapSet.to_list(state.players), state}
   end
 
   def handle_cast({:close_battle, name, player_name}, state) do
