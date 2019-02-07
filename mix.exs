@@ -39,6 +39,8 @@ defmodule Tanks.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:cowboy, "~> 1.0"},
+      {:excheck, "~> 0.6", only: :test},
+      {:triq, "~> 1.3.0", only: :test},
       {:collidex, "~> 0.2.0"}
     ]
   end

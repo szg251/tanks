@@ -117,13 +117,19 @@ defmodule Tanks.Lodge do
   end
 
   def handle_call({:start_battle, name, owner_name}, _from, state) do
-    {:ok, pid} = BattleSupervisor.start_battle()
-    success = :ets.insert_new(:battles, {name, pid, owner_name})
+    case name_valid?(name) do
+      {:ok, valid_name} ->
+        {:ok, pid} = BattleSupervisor.start_battle()
+        success = :ets.insert_new(:battles, {valid_name, pid, owner_name})
 
-    if success do
-      {:reply, {:ok, BattleSummary.create({name, pid, owner_name})}, state}
-    else
-      {:reply, :error, state}
+        if success do
+          {:reply, {:ok, BattleSummary.create({valid_name, pid, owner_name})}, state}
+        else
+          {:reply, :error, state}
+        end
+
+      {:error, _} ->
+        {:reply, :error, state}
     end
   end
 
@@ -149,5 +155,12 @@ defmodule Tanks.Lodge do
     end
 
     {:noreply, state}
+  end
+
+  # Validate name
+  defp name_valid?(name) do
+    import Tanks.Validator
+
+    valid?([min(1), max(20)], name)
   end
 end
