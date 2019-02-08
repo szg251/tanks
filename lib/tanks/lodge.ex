@@ -166,15 +166,9 @@ defmodule Tanks.Lodge do
     with {:ok, valid_name} <- name_valid?(name),
          {:ok, pid} <- BattleSupervisor.start_battle(),
          {:ok, usable_name} <-
-           if(!Map.has_key?(state.battles, valid_name),
-             do: {:ok, valid_name},
-             else: {:error, "battle already exists"}
-           ),
+           pipe_when(valid_name, &(!Map.has_key?(state.battles, &1)), "battle already exists"),
          {:ok, existing_player} <-
-           if(MapSet.member?(state.players, owner_name),
-             do: {:ok, owner_name},
-             else: {:error, "owner does not exits"}
-           ) do
+           pipe_when(owner_name, &(!Map.has_key?(state.players, &1)), "owner does not exist") do
       summary = BattleSummary.create(valid_name, pid, existing_player)
 
       new_state = %Lodge{
@@ -250,5 +244,14 @@ defmodule Tanks.Lodge do
     import Tanks.Validator
 
     valid?([min(1), max(20)], name)
+  end
+
+  # Puts a value into a result tuple according to a predicate
+  defp pipe_when(value, func, error_message) do
+    if func.(value) do
+      {:ok, value}
+    else
+      {:error, error_message}
+    end
   end
 end
