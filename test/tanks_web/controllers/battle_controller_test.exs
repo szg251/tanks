@@ -8,7 +8,7 @@ defmodule TanksWeb.BattleControllerTest do
 
   def fixture(:player) do
     {:ok, player} = Lodge.create_player("test_owner")
-    :ok
+    player
   end
 
   def fixture(:battle) do
@@ -86,7 +86,8 @@ defmodule TanksWeb.BattleControllerTest do
   end
 
   defp create_player(_) do
-    fixture(:player)
+    player = fixture(:player)
+    {:ok, player: player}
   end
 
   defp create_battle(_) do

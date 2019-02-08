@@ -44,6 +44,25 @@ defmodule TanksWeb.PlayerController do
     end
   end
 
+  def show(conn, %{"id" => name}) do
+    case Lodge.get_player(name) do
+      {:ok, player} ->
+        render(conn, "show.json", player: player)
+
+      {:error, message = "player does not exist"} ->
+        conn
+        |> put_status(:not_found)
+        |> put_view(TanksWeb.ErrorView)
+        |> render("error.json", messages: [message])
+
+      _ ->
+        conn
+        |> put_status(:not_found)
+        |> put_view(TanksWeb.ErrorView)
+        |> render("error.json", messages: ["server error"])
+    end
+  end
+
   def delete(conn, %{"id" => name}) do
     with :ok <- Lodge.remove_player(name) do
       send_resp(conn, :no_content, "")

@@ -130,6 +130,23 @@ defmodule Tanks.Lodge do
   end
 
   @doc """
+  Get player
+
+  ## Example
+
+    iex> Tanks.Lodge.create_player("owner")
+    iex> Tanks.Lodge.get_player("owner")
+    {:ok, %{name: "owner"}}
+
+    iex> Tanks.Lodge.get_player("owner")
+    {:error, "player does not exist"}
+
+  """
+  def get_player(name) do
+    GenServer.call(__MODULE__, {:get_player, name})
+  end
+
+  @doc """
   List all players
 
   ## Example
@@ -213,6 +230,17 @@ defmodule Tanks.Lodge do
       |> Enum.map(fn {name, {pid, owner_name}} -> BattleSummary.create(name, pid, owner_name) end)
 
     {:reply, list, state}
+  end
+
+  def handle_call({:get_player, name}, _from, state) do
+    result =
+      if MapSet.member?(state.players, name) do
+        {:ok, %{name: name}}
+      else
+        {:error, "player does not exist"}
+      end
+
+    {:reply, result, state}
   end
 
   def handle_call(:list_players, _from, state) do

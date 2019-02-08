@@ -46,14 +46,21 @@ defmodule TanksWeb.BattleController do
   end
 
   def show(conn, %{"id" => name}) do
-    with {:ok, %BattleSummary{} = battle} <- Lodge.get_battle(name) do
-      render(conn, "show.json", battle: battle)
-    else
-      _ ->
+    case Lodge.get_battle(name) do
+      {:ok, %BattleSummary{} = battle} ->
+        render(conn, "show.json", battle: battle)
+
+      {:error, message = "battle does not exist"} ->
         conn
         |> put_status(:not_found)
         |> put_view(TanksWeb.ErrorView)
-        |> render(:"404")
+        |> render("error.json", messages: [message])
+
+      _ ->
+        conn
+        |> put_status(500)
+        |> put_view(TanksWeb.ErrorView)
+        |> render("error.json", messages: ["server error"])
     end
   end
 

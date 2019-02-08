@@ -39,6 +39,16 @@ defmodule TanksWeb.PlayerControllerTest do
     end
   end
 
+  describe "show player" do
+    setup [:create_player]
+
+    test "renders player", %{conn: conn, player: player} do
+      conn = get(conn, Routes.player_path(conn, :show, player.name))
+
+      assert json_response(conn, 200)["data"] == %{"name" => player.name}
+    end
+  end
+
   describe "delete player" do
     setup [:create_player]
 
