@@ -6,7 +6,6 @@ import Data.BattleSummary as BattleSummary exposing (BattleInit, BattleSummary)
 import Data.Player exposing (Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
-import Debug
 import Element exposing (..)
 import Element.Input as Input
 import Http

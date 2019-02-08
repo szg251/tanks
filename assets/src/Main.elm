@@ -126,7 +126,7 @@ update msg model =
         GotLocalStorageValue { key, value } ->
             case key of
                 "player_name" ->
-                    case (Maybe.andThen String20.create << Debug.log "value") value of
+                    case Maybe.andThen String20.create value of
                         Just validName ->
                             ( model, Request.Players.requestShow GotPlayerVerification { name = validName } )
 
