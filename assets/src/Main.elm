@@ -18,6 +18,7 @@ type Msg
     = UrlChanged Url
     | UrlRequested UrlRequest
     | GotLocalStorageValue LocalStorage.KeyValue
+    | GotPlayerVerification (Maybe String)
     | LodgeMsg Lodge.Msg
     | BattleMsg Battle.Msg
 
@@ -122,10 +123,13 @@ update msg model =
         GotLocalStorageValue { key, value } ->
             case key of
                 "player_name" ->
-                    updateSession (Session.setPlayerName value model.session) model
+                    ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
+
+        GotPlayerVerification maybeName ->
+            updateSession (Session.setPlayerName maybeName model.session) model
 
         LodgeMsg subMsg ->
             case model.page of

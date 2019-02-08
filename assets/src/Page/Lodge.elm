@@ -1,7 +1,7 @@
 module Page.Lodge exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
-import Data.BattleSummary as BattleSummary exposing (BattleSummary)
+import Data.BattleSummary as BattleSummary exposing (BattleInit, BattleSummary)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Element exposing (..)
@@ -9,7 +9,7 @@ import Element.Input as Input
 import Http
 import LocalStorage
 import RemoteData exposing (RemoteData(..), WebData)
-import Request.Lodge
+import Request.Battles
 import Route exposing (Route(..))
 
 
@@ -21,7 +21,7 @@ type Msg
     | InputBattleName String
     | SaveName
     | EditName
-    | RequestStartBattle String20 String20
+    | RequestStartBattle BattleInit
 
 
 type alias Model =
@@ -49,7 +49,7 @@ init session =
       , session = session
       }
     , Cmd.batch
-        [ Request.Lodge.requestSummaries GotSummaries
+        [ Request.Battles.requestList GotSummaries
         ]
     )
 
@@ -128,7 +128,7 @@ viewCreateBattleForm session battleName =
                 , Input.button [ alignRight ]
                     { onPress =
                         if String20.length battleName > 0 then
-                            Just (RequestStartBattle battleName ownerName)
+                            Just (RequestStartBattle { name = battleName, ownerName = ownerName })
 
                         else
                             Nothing
@@ -143,7 +143,7 @@ viewBattles session battles =
         columns =
             [ { header = text "Name"
               , width = fill
-              , view = .name >> text
+              , view = .name >> String20.value >> text
               }
             , { header = text "Players"
               , width = shrink
@@ -212,13 +212,8 @@ update msg model =
         EditName ->
             ( model, LocalStorage.removeItem "player_name" )
 
-        RequestStartBattle playerName battleName ->
-            ( model
-            , Request.Lodge.requestStartBattle
-                GotNewBattle
-                (String20.value playerName)
-                (String20.value battleName)
-            )
+        RequestStartBattle battleInit ->
+            ( model, Request.Battles.requestCreate GotNewBattle battleInit )
 
 
 subscriptions : Model -> Sub Msg

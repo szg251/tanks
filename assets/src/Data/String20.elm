@@ -1,4 +1,7 @@
-module Data.String20 exposing (String20, create, empty, length, value)
+module Data.String20 exposing (String20, create, decoder, encode, empty, length, value)
+
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode exposing (Value)
 
 
 type String20
@@ -27,3 +30,23 @@ value (String20 string) =
 length : String20 -> Int
 length (String20 string) =
     String.length string
+
+
+decoder : Decoder String20
+decoder =
+    let
+        decodeHelper string =
+            case create string of
+                Nothing ->
+                    Decode.fail "too long"
+
+                Just string20 ->
+                    Decode.succeed string20
+    in
+    Decode.string
+        |> Decode.andThen decodeHelper
+
+
+encode : String20 -> Value
+encode =
+    value >> Encode.string
