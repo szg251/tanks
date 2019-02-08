@@ -98,10 +98,10 @@ viewUserForm session playerName =
                     }
                 , Input.button [ alignRight ]
                     { onPress =
-                        case playerName of 
+                        case playerName of
                             Valid _ ->
                                 Just SaveName
-                            
+
                             Invalid _ _ ->
                                 Nothing
                     , label = text "OK"

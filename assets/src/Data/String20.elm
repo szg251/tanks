@@ -1,4 +1,4 @@
-module Data.String20 exposing (String20, create, decoder, encode, empty, length, value)
+module Data.String20 exposing (String20, create, decoder, empty, encode, length, value)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
