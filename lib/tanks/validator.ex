@@ -7,31 +7,35 @@ defmodule Tanks.Validator do
   # Create a minimum length validator
   @spec min(integer()) :: validator(binary())
 
-  def min(n) when is_integer(n) do
+  def custom(condition, message) do
     fn validatee ->
       bind(validatee, fn str ->
-        if String.length(str) >= n do
+        if condition.(str) do
           {:ok, str}
         else
-          {:error, "too short"}
+          {:error, message}
         end
       end)
     end
+  end
+
+  def min(n) when is_integer(n) do
+    custom(&(String.length(&1) >= n), "too short")
   end
 
   # Create a maximum length validator
   @spec max(integer()) :: validator(binary())
 
   def max(n) when is_integer(n) do
-    fn validatee ->
-      bind(validatee, fn str ->
-        if String.length(str) <= n do
-          {:ok, str}
-        else
-          {:error, "too long"}
-        end
-      end)
-    end
+    custom(&(String.length(&1) <= n), "too long")
+  end
+
+  def regex(regex, message) do
+    custom(&Regex.match?(regex, &1), message)
+  end
+
+  def no_special_chars do
+    regex(~r/^[a-zA-Z0-9_]*$/, "contains special characters")
   end
 
   def compose(validator1, validator2)

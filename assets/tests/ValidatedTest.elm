@@ -2,7 +2,7 @@ module ValidatedTest exposing (suite)
 
 import Expect exposing (Expectation)
 import Test exposing (..)
-import Validated exposing (Validated(..), combine, max, min)
+import Validated exposing (Validated(..), combine, max, min, regex)
 
 
 suite : Test
@@ -34,6 +34,20 @@ suite =
                     Expect.equal
                         (max 5 "too long" "123456")
                         (Invalid "too long" "123456")
+                )
+            ]
+        , describe "regex"
+            [ test "valid"
+                (\_ ->
+                    Expect.equal
+                        (regex "^[0-9]*$" "regex does not match" "12345")
+                        (Valid "12345")
+                )
+            , test "invalid"
+                (\_ ->
+                    Expect.equal
+                        (regex "^[0-9]*$" "regex does not match" "123a5")
+                        (Invalid "regex does not match" "123a5")
                 )
             ]
         , describe "combined validators"

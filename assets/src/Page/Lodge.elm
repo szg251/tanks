@@ -14,7 +14,7 @@ import RemoteData exposing (RemoteData(..), WebData)
 import Request.Battles
 import Request.Players
 import Route exposing (Route(..))
-import Validated exposing (Validated(..))
+import Validated exposing (Validated(..), Validator)
 
 
 type Msg
@@ -216,14 +216,14 @@ update msg model =
         InputPlayerName name ->
             let
                 playerName =
-                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+                    Validated.map String20.createTrim (nameValidator name)
             in
             ( { model | newPlayerName = playerName }, Cmd.none )
 
         InputBattleName name ->
             let
                 battleName =
-                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+                    Validated.map String20.createTrim (nameValidator name)
             in
             ( { model | newBattleName = battleName }, Cmd.none )
 
@@ -278,3 +278,11 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
+
+
+nameValidator : Validator String
+nameValidator =
+    Validated.combine
+        [ Validated.min 1 "Please insert a name"
+        , Validated.noSpecialChars "Special characters are not allowed"
+        ]

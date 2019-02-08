@@ -271,7 +271,7 @@ defmodule Tanks.Lodge do
   defp name_valid?(name) do
     import Tanks.Validator
 
-    valid?([min(1), max(20)], name)
+    valid?([no_special_chars(), min(1), max(20)], name)
   end
 
   # Puts a value into a result tuple according to a predicate
