@@ -197,9 +197,9 @@ update msg model =
         GotNewBattle response ->
             case response of
                 Success newBattle ->
-                    ( model,
-                    Nav.pushUrl model.session.navKey (Route.toPath (Route.Battle newBattle.name))
-                     )
+                    ( model
+                    , Nav.pushUrl model.session.navKey (Route.toPath (Route.Battle newBattle.name))
+                    )
 
                 Failure (Http.BadStatus 409) ->
                     ( { model
