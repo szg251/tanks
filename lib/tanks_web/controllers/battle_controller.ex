@@ -18,15 +18,34 @@ defmodule TanksWeb.BattleController do
       |> put_view(TanksWeb.ErrorView)
       |> render(:"422")
     else
-      with {:ok, %BattleSummary{} = battle} <- Lodge.start_battle(name, owner_name) do
-        conn
-        |> put_status(:created)
-        |> render("show.json", battle: battle)
+      case Lodge.start_battle(name, owner_name) do
+        {:ok, %BattleSummary{} = battle} ->
+          conn
+          |> put_status(:created)
+          |> render("show.json", battle: battle)
+
+        {:error, message = "battle already exists"} ->
+          conn
+          |> put_status(409)
+          |> put_view(TanksWeb.ErrorView)
+          |> render("error.json", messages: [message])
+
+        {:error, message} ->
+          conn
+          |> put_status(400)
+          |> put_view(TanksWeb.ErrorView)
+          |> render("error.json", messages: [message])
+
+        _ ->
+          conn
+          |> put_status(500)
+          |> put_view(TanksWeb.ErrorView)
+          |> render("error.json", messages: ["server error"])
       end
     end
   end
 
-  def show(conn, %{"battle_name" => name}) do
+  def show(conn, %{"id" => name}) do
     with {:ok, %BattleSummary{} = battle} <- Lodge.get_battle(name) do
       render(conn, "show.json", battle: battle)
     else
@@ -38,7 +57,7 @@ defmodule TanksWeb.BattleController do
     end
   end
 
-  def delete(conn, %{"battle_name" => battle_name, "player_name" => player_name}) do
+  def delete(conn, %{"id" => battle_name, "player_name" => player_name}) do
     with :ok <- Lodge.close_battle(battle_name, player_name) do
       send_resp(conn, :no_content, "")
     end

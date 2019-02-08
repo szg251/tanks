@@ -16,10 +16,8 @@ defmodule TanksWeb.Router do
   scope "/api", TanksWeb do
     pipe_through(:api)
 
-    get("/battles/:battle_name", BattleController, :show)
-    get("/battles", BattleController, :index)
-    post("/battles", BattleController, :create)
-    delete("/battles/:battle_name", BattleController, :delete)
+    resources("/players", PlayerController, only: [:index, :create, :delete])
+    resources("/battles", BattleController, only: [:index, :show, :create, :delete])
   end
 
   scope "/", TanksWeb do

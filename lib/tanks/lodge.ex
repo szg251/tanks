@@ -118,7 +118,7 @@ defmodule Tanks.Lodge do
   ## Example
 
     iex> Tanks.Lodge.create_player("owner")
-    {:ok, "owner"}
+    {:ok, %{name: "owner"}}
 
     iex> Tanks.Lodge.create_player("owner")
     iex> Tanks.Lodge.create_player("owner")
@@ -136,7 +136,7 @@ defmodule Tanks.Lodge do
 
     iex> Tanks.Lodge.create_player("owner")
     iex> Tanks.Lodge.list_players()
-    ["owner"]
+    [%{name: "owner"}]
 
   """
   def list_players do
@@ -200,11 +200,16 @@ defmodule Tanks.Lodge do
   end
 
   def handle_call({:create_player, player_name}, _from, state) do
-    if !MapSet.member?(state.players, player_name) do
-      new_state = %Lodge{state | players: state.players |> MapSet.put(player_name)}
-      {:reply, {:ok, player_name}, new_state}
+    with {:ok, valid_name} <- name_valid?(player_name) do
+      if !MapSet.member?(state.players, valid_name) do
+        new_state = %Lodge{state | players: state.players |> MapSet.put(valid_name)}
+        {:reply, {:ok, %{name: valid_name}}, new_state}
+      else
+        {:reply, {:error, "player already exists"}, state}
+      end
     else
-      {:reply, {:error, "player already exists"}, state}
+      error_result ->
+        {:reply, error_result, state}
     end
   end
 
@@ -217,7 +222,7 @@ defmodule Tanks.Lodge do
   end
 
   def handle_call(:list_players, _from, state) do
-    {:reply, MapSet.to_list(state.players), state}
+    {:reply, MapSet.to_list(state.players) |> Enum.map(&%{name: &1}), state}
   end
 
   def handle_cast({:close_battle, name, player_name}, state) do
