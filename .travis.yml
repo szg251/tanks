@@ -4,6 +4,6 @@ matrix:
       elixir: "1.8.0"
       otp_release: "21.2"
 
-    - langugae: elm
+    - language: elm
       elm: "0.19.0"
       before_script: cd assets
