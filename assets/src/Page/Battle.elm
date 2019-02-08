@@ -37,7 +37,7 @@ type Key
 type alias Model =
     { gameState : GameState
     , window : { width : Int, height : Int }
-    , battleName : String
+    , battleName : String20
     , session : Session
     , channel : Maybe Channel
     }
@@ -57,7 +57,7 @@ getWindowSize =
         |> Task.perform (fromViewport >> FitWindowSize)
 
 
-init : Session -> String -> ( Model, Cmd Msg )
+init : Session -> String20 -> ( Model, Cmd Msg )
 init session battleName =
     ( { gameState = { tanks = [], bullets = [] }
       , window = { width = 1000, height = 600 }
@@ -65,11 +65,11 @@ init session battleName =
       , session = session
       , channel = Nothing
       }
-    , case session.playerName of
+    , case session.player of
         Nothing ->
             getWindowSize
 
-        Just name ->
+        Just { name } ->
             Cmd.batch
                 [ Channel.connect (String20.value name)
                 , getWindowSize
@@ -154,7 +154,7 @@ update msg model =
         GotSocket resp ->
             case resp of
                 Ok socket ->
-                    ( model, Channel.join socket ("game:" ++ model.battleName) )
+                    ( model, Channel.join socket ("game:" ++ String20.value model.battleName) )
 
                 _ ->
                     ( model, Cmd.none )

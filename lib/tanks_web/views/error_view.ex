@@ -7,8 +7,8 @@ defmodule TanksWeb.ErrorView do
   #   "Internal Server Error"
   # end
 
-  def render("422.html", _assigns) do
-    %{"errors" => ["Invalid Request"]}
+  def render("error.json", %{messages: messages}) do
+    %{"errors" => messages}
   end
 
   # By default, Phoenix returns the status message from

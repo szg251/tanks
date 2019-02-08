@@ -15,8 +15,8 @@ defmodule TanksWeb.GameChannel do
         IO.inspect(socket.assigns.user_id)
         {:ok, socket |> assign(:battle_pid, battle.pid)}
 
-      :error ->
-        {:error, %{reason: "battle is closed"}}
+      {:error, reason} ->
+        {:error, %{reason: reason}}
     end
   end
 
