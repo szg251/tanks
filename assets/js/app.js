@@ -21,10 +21,7 @@ import socket from "./socket"
 import { Elm } from "../src/Main.elm"
 
 const app = Elm.Main.init({
-  node: document.getElementById("elm-node"),
-  flags: {
-    playerName: localStorage.getItem("player_name")
-  }
+  node: document.getElementById("elm-node")
 })
 
 app.ports.channelFromElm.subscribe(({ msg, payload }) => {
