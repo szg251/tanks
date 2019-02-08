@@ -1,4 +1,4 @@
-module Data.String20 exposing (String20, create, decoder, empty, encode, length, value)
+module Data.String20 exposing (String20, create, createTrim, decoder, empty, encode, length, value)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -15,6 +15,11 @@ create string =
 
     else
         Nothing
+
+
+createTrim : String -> String20
+createTrim string =
+    String20 (String.left 20 string)
 
 
 empty : String20

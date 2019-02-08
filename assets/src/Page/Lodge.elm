@@ -1,10 +1,12 @@
 module Page.Lodge exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
+import Browser.Navigation as Nav
 import Data.BattleSummary as BattleSummary exposing (BattleInit, BattleSummary)
 import Data.Player exposing (Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
+import Debug
 import Element exposing (..)
 import Element.Input as Input
 import Http
@@ -89,23 +91,27 @@ viewUserForm : Session -> Validated String20 -> Element Msg
 viewUserForm session playerName =
     case session.player of
         Nothing ->
-            row [ width fill, spacing 10 ]
-                [ Input.text [ centerX ]
-                    { onChange = InputPlayerName
-                    , text = (String20.value << Validated.value) playerName
-                    , placeholder = Nothing
-                    , label = Input.labelLeft [ width (px 150), centerY ] (text "Player name:")
-                    }
-                , Input.button [ alignRight ]
-                    { onPress =
-                        case playerName of
-                            Valid _ ->
-                                Just SaveName
+            column []
+                [ row [ paddingEach { left = 150, top = 0, right = 0, bottom = 0 } ]
+                    [ text <| Validated.error playerName ]
+                , row [ width fill, spacing 10 ]
+                    [ Input.text [ centerX ]
+                        { onChange = InputPlayerName
+                        , text = (String20.value << Validated.value) playerName
+                        , placeholder = Nothing
+                        , label = Input.labelLeft [ width (px 150), centerY ] (text "Player name:")
+                        }
+                    , Input.button [ alignRight ]
+                        { onPress =
+                            case playerName of
+                                Valid _ ->
+                                    Just SaveName
 
-                            Invalid _ _ ->
-                                Nothing
-                    , label = text "OK"
-                    }
+                                Invalid _ _ ->
+                                    Nothing
+                        , label = text "OK"
+                        }
+                    ]
                 ]
 
         Just { name } ->
@@ -124,23 +130,27 @@ viewCreateBattleForm session battleName =
             Element.none
 
         Just player ->
-            row [ width fill, spacing 10 ]
-                [ Input.text []
-                    { onChange = InputBattleName
-                    , text = (String20.value << Validated.value) battleName
-                    , placeholder = Nothing
-                    , label = Input.labelLeft [ width (px 150), centerY ] (text "Battle name:")
-                    }
-                , Input.button [ alignRight ]
-                    { onPress =
-                        case battleName of
-                            Valid validName ->
-                                Just (RequestStartBattle { name = validName, ownerName = player.name })
+            column []
+                [ row [ paddingEach { left = 150, top = 0, right = 0, bottom = 0 } ]
+                    [ text <| Validated.error battleName ]
+                , row [ width fill, spacing 10 ]
+                    [ Input.text []
+                        { onChange = InputBattleName
+                        , text = (String20.value << Validated.value) battleName
+                        , placeholder = Nothing
+                        , label = Input.labelLeft [ width (px 150), centerY ] (text "Battle name:")
+                        }
+                    , Input.button [ alignRight ]
+                        { onPress =
+                            case battleName of
+                                Valid validName ->
+                                    Just (RequestStartBattle { name = validName, ownerName = player.name })
 
-                            Invalid _ _ ->
-                                Nothing
-                    , label = text "OK"
-                    }
+                                Invalid _ _ ->
+                                    Nothing
+                        , label = text "OK"
+                        }
+                    ]
                 ]
 
 
@@ -187,30 +197,40 @@ update msg model =
         GotNewBattle response ->
             case response of
                 Success newBattle ->
-                    ( { model | battles = RemoteData.map ((::) newBattle) model.battles }, Cmd.none )
+                    ( model,
+                    Nav.pushUrl model.session.navKey (Route.toPath (Route.Battle newBattle.name))
+                     )
+
+                Failure (Http.BadStatus 409) ->
+                    ( { model
+                        | newBattleName =
+                            Validated.invalidate
+                                "This name is already used."
+                                model.newBattleName
+                      }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( model, Cmd.none )
 
         InputPlayerName name ->
-            case String20.create name of
-                Just validName ->
-                    ( { model | newPlayerName = validName }, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
+            let
+                playerName =
+                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+            in
+            ( { model | newPlayerName = playerName }, Cmd.none )
 
         InputBattleName name ->
-            case String20.create name of
-                Just validName ->
-                    ( { model | newBattleName = validName }, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
+            let
+                battleName =
+                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+            in
+            ( { model | newBattleName = battleName }, Cmd.none )
 
         SaveName ->
             ( model
-            , Request.Players.requestCreate PlayerSaved <| Player model.newPlayerName
+            , Request.Players.requestCreate PlayerSaved (Player (Validated.value model.newPlayerName))
             )
 
         PlayerSaved remotePlayer ->
@@ -223,7 +243,16 @@ update msg model =
                         }
                     )
 
-                -- Failue error ->
+                Failure (Http.BadStatus 409) ->
+                    ( { model
+                        | newPlayerName =
+                            Validated.invalidate
+                                "This name is already used."
+                                model.newPlayerName
+                      }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 

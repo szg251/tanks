@@ -5,7 +5,6 @@ import Browser.Navigation as Nav
 import Data.Player exposing (Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
-import Debug
 import Document
 import Html exposing (Html)
 import LocalStorage
@@ -125,7 +124,7 @@ update msg model =
                     ( model, Cmd.none )
 
         GotLocalStorageValue { key, value } ->
-            case key |> Debug.log "key" of
+            case key of
                 "player_name" ->
                     case (Maybe.andThen String20.create << Debug.log "value") value of
                         Just validName ->
