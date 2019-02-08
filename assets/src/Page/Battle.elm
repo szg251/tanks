@@ -65,11 +65,11 @@ init session battleName =
       , session = session
       , channel = Nothing
       }
-    , case session.playerName of
+    , case session.player of
         Nothing ->
             getWindowSize
 
-        Just name ->
+        Just { name } ->
             Cmd.batch
                 [ Channel.connect (String20.value name)
                 , getWindowSize

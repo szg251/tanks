@@ -2,14 +2,18 @@ module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Navigation as Nav
+import Data.Player exposing (Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
+import Debug
 import Document
 import Html exposing (Html)
 import LocalStorage
 import Page.Battle as Battle
 import Page.ErrorPage as ErrorPage
 import Page.Lodge as Lodge
+import RemoteData exposing (RemoteData(..), WebData)
+import Request.Players
 import Route
 import Url exposing (Url)
 
@@ -18,7 +22,7 @@ type Msg
     = UrlChanged Url
     | UrlRequested UrlRequest
     | GotLocalStorageValue LocalStorage.KeyValue
-    | GotPlayerVerification (Maybe String)
+    | GotPlayerVerification (WebData Player)
     | LodgeMsg Lodge.Msg
     | BattleMsg Battle.Msg
 
@@ -121,15 +125,24 @@ update msg model =
                     ( model, Cmd.none )
 
         GotLocalStorageValue { key, value } ->
-            case key of
+            case key |> Debug.log "key" of
                 "player_name" ->
-                    ( model, Cmd.none )
+                    case (Maybe.andThen String20.create << Debug.log "value") value of
+                        Just validName ->
+                            ( model, Request.Players.requestShow GotPlayerVerification { name = validName } )
+
+                        Nothing ->
+                            updateSession (Session.setPlayer Nothing model.session) model
 
                 _ ->
                     ( model, Cmd.none )
 
-        GotPlayerVerification maybeName ->
-            updateSession (Session.setPlayerName maybeName model.session) model
+        GotPlayerVerification remotePlayer ->
+            let
+                maybePlayer =
+                    RemoteData.toMaybe remotePlayer
+            in
+            updateSession (Session.setPlayer maybePlayer model.session) model
 
         LodgeMsg subMsg ->
             case model.page of

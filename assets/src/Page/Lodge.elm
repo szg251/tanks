@@ -2,6 +2,7 @@ module Page.Lodge exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Data.BattleSummary as BattleSummary exposing (BattleInit, BattleSummary)
+import Data.Player exposing (Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Element exposing (..)
@@ -10,7 +11,9 @@ import Http
 import LocalStorage
 import RemoteData exposing (RemoteData(..), WebData)
 import Request.Battles
+import Request.Players
 import Route exposing (Route(..))
+import Validated exposing (Validated(..))
 
 
 type Msg
@@ -20,13 +23,15 @@ type Msg
     | InputPlayerName String
     | InputBattleName String
     | SaveName
+    | PlayerSaved (WebData Player)
     | EditName
+    | PlayerDeleted (Result Http.Error ())
     | RequestStartBattle BattleInit
 
 
 type alias Model =
-    { newPlayerName : String20
-    , newBattleName : String20
+    { newPlayerName : Validated String20
+    , newBattleName : Validated String20
     , battles : WebData (List BattleSummary)
     , session : Session
     }
@@ -36,15 +41,15 @@ init : Session -> ( Model, Cmd Msg )
 init session =
     let
         playerName =
-            case session.playerName of
-                Just name ->
-                    name
+            case session.player of
+                Just { name } ->
+                    Valid name
 
                 Nothing ->
-                    String20.empty
+                    Valid String20.empty
     in
     ( { newPlayerName = playerName
-      , newBattleName = String20.empty
+      , newBattleName = Valid String20.empty
       , battles = NotAsked
       , session = session
       }
@@ -80,29 +85,30 @@ viewHeader =
     row [ width fill, height (px 50) ] [ el [ centerX, centerY ] (text "Lodge") ]
 
 
-viewUserForm : Session -> String20 -> Element Msg
+viewUserForm : Session -> Validated String20 -> Element Msg
 viewUserForm session playerName =
-    case session.playerName of
+    case session.player of
         Nothing ->
             row [ width fill, spacing 10 ]
                 [ Input.text [ centerX ]
                     { onChange = InputPlayerName
-                    , text = String20.value playerName
+                    , text = (String20.value << Validated.value) playerName
                     , placeholder = Nothing
                     , label = Input.labelLeft [ width (px 150), centerY ] (text "Player name:")
                     }
                 , Input.button [ alignRight ]
                     { onPress =
-                        if String20.length playerName > 0 then
-                            Just SaveName
-
-                        else
-                            Nothing
+                        case playerName of 
+                            Valid _ ->
+                                Just SaveName
+                            
+                            Invalid _ _ ->
+                                Nothing
                     , label = text "OK"
                     }
                 ]
 
-        Just name ->
+        Just { name } ->
             row [ width fill, spacing 10 ]
                 [ el [ width (px 150), centerY ] (text "Player name:")
                 , el [] (text <| String20.value name)
@@ -111,27 +117,28 @@ viewUserForm session playerName =
                 ]
 
 
-viewCreateBattleForm : Session -> String20 -> Element Msg
+viewCreateBattleForm : Session -> Validated String20 -> Element Msg
 viewCreateBattleForm session battleName =
-    case session.playerName of
+    case session.player of
         Nothing ->
             Element.none
 
-        Just ownerName ->
+        Just player ->
             row [ width fill, spacing 10 ]
                 [ Input.text []
                     { onChange = InputBattleName
-                    , text = String20.value battleName
+                    , text = (String20.value << Validated.value) battleName
                     , placeholder = Nothing
                     , label = Input.labelLeft [ width (px 150), centerY ] (text "Battle name:")
                     }
                 , Input.button [ alignRight ]
                     { onPress =
-                        if String20.length battleName > 0 then
-                            Just (RequestStartBattle { name = battleName, ownerName = ownerName })
+                        case battleName of
+                            Valid validName ->
+                                Just (RequestStartBattle { name = validName, ownerName = player.name })
 
-                        else
-                            Nothing
+                            Invalid _ _ ->
+                                Nothing
                     , label = text "OK"
                     }
                 ]
@@ -153,7 +160,7 @@ viewBattles session battles =
               , width = shrink
               , view =
                     \{ name } ->
-                        case session.playerName of
+                        case session.player of
                             Nothing ->
                                 Element.none
 
@@ -203,14 +210,38 @@ update msg model =
 
         SaveName ->
             ( model
-            , LocalStorage.setItem
-                { key = "player_name"
-                , value = Just (String20.value model.newPlayerName)
-                }
+            , Request.Players.requestCreate PlayerSaved <| Player model.newPlayerName
             )
 
+        PlayerSaved remotePlayer ->
+            case remotePlayer of
+                Success player ->
+                    ( model
+                    , LocalStorage.setItem
+                        { key = "player_name"
+                        , value = Just (String20.value player.name)
+                        }
+                    )
+
+                -- Failue error ->
+                _ ->
+                    ( model, Cmd.none )
+
         EditName ->
-            ( model, LocalStorage.removeItem "player_name" )
+            case model.session.player of
+                Just player ->
+                    ( model, Request.Players.requestDelete PlayerDeleted player )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        PlayerDeleted response ->
+            case response of
+                Ok () ->
+                    ( model, LocalStorage.removeItem "player_name" )
+
+                Err _ ->
+                    ( model, Cmd.none )
 
         RequestStartBattle battleInit ->
             ( model, Request.Battles.requestCreate GotNewBattle battleInit )
