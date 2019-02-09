@@ -1,5 +1,12 @@
+defmodule Tanks.GameLogic.Battle.Broadcast do
+  @derive Jason.Encoder
+  defstruct bullets: [],
+            tanks: [],
+            remaining_time: 5 * 60
+end
+
 defmodule Tanks.GameLogic.Battle do
-  use GenServer
+  use GenServer, restart: :temporary
 
   alias Tanks.GameLogic.Battle
   alias Tanks.GameLogic.Tank
@@ -7,13 +14,24 @@ defmodule Tanks.GameLogic.Battle do
 
   @tick_rate 30
 
-  # @enforce_keys [:tank_sup_pid]
-  defstruct tanks: Map.new(),
+  defstruct name: nil,
+            tanks: Map.new(),
             tank_sup_pid: nil,
-            bullets: []
+            bullets: [],
+            remaining_ticks: round(5 * 60 * 1000 / @tick_rate),
+            subscribers: Map.new(),
+            prev_broadcast: %Battle.Broadcast{}
 
-  def start_link(tank_sup_pid) when is_pid(tank_sup_pid) do
-    GenServer.start_link(__MODULE__, {:ok, tank_sup_pid}, [])
+  def start_link({tank_sup_pid, name}) when is_pid(tank_sup_pid) do
+    GenServer.start_link(__MODULE__, {:ok, tank_sup_pid, name}, [])
+  end
+
+  def subscribe(game_pid, id, pid) do
+    GenServer.cast(game_pid, {:subscribe, id, pid})
+  end
+
+  def unsubscribe(game_pid, id) do
+    GenServer.cast(game_pid, {:unsubscribe, id})
   end
 
   @doc """
@@ -22,7 +40,7 @@ defmodule Tanks.GameLogic.Battle do
   ## Example
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> {:ok, pid} = Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> is_pid(pid)
     true
@@ -38,12 +56,12 @@ defmodule Tanks.GameLogic.Battle do
     ## Example
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.remove_tank(game_pid, "test")
     :error
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.remove_tank(game_pid, "test")
     :ok
@@ -59,15 +77,15 @@ defmodule Tanks.GameLogic.Battle do
   ## Example
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.get_state(game_pid)
-    %{tanks: [], bullets: []}
+    %{tanks: [], bullets: [], remaining_ticks: 5 * 2_000}
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.get_state(game_pid)
-    %{tanks: [%Tanks.GameLogic.Tank{}], bullets: []}
+    %{tanks: [%Tanks.GameLogic.Tank{player_name: "test"}], bullets: [], remaining_ticks: 5 * 2_000}
 
   """
   def get_state(game_pid) do
@@ -80,12 +98,12 @@ defmodule Tanks.GameLogic.Battle do
     ## Examples
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.get_pid(game_pid, "test")
     :error
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> {:ok, pid} = Tanks.GameLogic.Battle.get_pid(game_pid, "test")
     iex> is_pid(pid)
@@ -102,12 +120,12 @@ defmodule Tanks.GameLogic.Battle do
     ## Example
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.count_tanks(game_pid)
     0
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.count_tanks(game_pid)
     1
@@ -124,7 +142,7 @@ defmodule Tanks.GameLogic.Battle do
     ## Example
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
-    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link(tank_sup_pid)
+    iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.fire(game_pid, "test")
     iex> Tanks.GameLogic.Battle.get_state(game_pid).bullets
@@ -143,16 +161,16 @@ defmodule Tanks.GameLogic.Battle do
   # SERVER #
   ##########
 
-  def init({:ok, tank_sup_pid}) when is_pid(tank_sup_pid) do
+  def init({:ok, tank_sup_pid, name}) when is_pid(tank_sup_pid) do
     schedule_tick()
-    {:ok, %Battle{tank_sup_pid: tank_sup_pid}}
+    {:ok, %Battle{tank_sup_pid: tank_sup_pid, name: name}}
   end
 
   # Evaluate movement
   def handle_info(:tick, state) do
     tank_pids = state.tanks |> Map.values()
 
-    tank_pids |> Enum.map(&Tank.eval(&1))
+    tank_pids |> Enum.each(&Tank.eval(&1))
 
     bullets =
       state.bullets
@@ -164,22 +182,47 @@ defmodule Tanks.GameLogic.Battle do
       end)
 
     remaining_bullets = Battle.get_hits(tank_pids, bullets)
+    remaining_ticks = state.remaining_ticks - 1
 
-    schedule_tick()
-    {:noreply, %Battle{state | bullets: remaining_bullets}}
+    new_state = %Battle{state | bullets: remaining_bullets, remaining_ticks: remaining_ticks}
+
+    if remaining_ticks > 0 do
+      next_broadcast =
+        %{
+          tanks: get_tank_states(state.tanks),
+          bullets: remaining_bullets,
+          remaining_ticks: remaining_ticks
+        }
+        |> to_api
+
+      if state.prev_broadcast != next_broadcast do
+        state.subscribers
+        |> Map.values()
+        |> Enum.each(&Process.send(&1, {:broadcast, next_broadcast}, []))
+      end
+
+      schedule_tick()
+      {:noreply, %{new_state | prev_broadcast: next_broadcast}}
+    else
+      tanks = get_tank_states(state.tanks)
+
+      state.subscribers
+      |> Map.values()
+      |> Enum.each(&Process.send(&1, {:end_battle, tanks}, []))
+
+      Tanks.Lodge.close_battle(state.name)
+      {:noreply, state}
+    end
   end
 
   # Handle stopped processes
   def handle_info({:DOWN, _ref, :process, old_pid, _reason}, state) do
     tanks =
-      for {k, pid} <- state.tanks, into: %{} do
-        if pid == old_pid do
-          {:ok, new_pid} = Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid)
-          {k, new_pid}
-        else
-          {k, pid}
-        end
-      end
+      state.tanks
+      |> Enum.reduce([], fn {k, pid}, arr ->
+        if old_pid == pid, do: [{k, pid} | arr], else: arr
+      end)
+      |> Enum.into(%{})
 
     {:noreply, %Battle{tanks: tanks}}
   end
@@ -187,7 +230,7 @@ defmodule Tanks.GameLogic.Battle do
   # Create a new tank
   def handle_call({:create_tank, player_name}, _from, state) do
     if !Map.has_key?(state.tanks, player_name) do
-      {:ok, tank_pid} = Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid)
+      {:ok, tank_pid} = Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid, player_name)
       Process.monitor(tank_pid)
 
       newState = %Battle{state | tanks: state.tanks |> Map.put_new(player_name, tank_pid)}
@@ -211,12 +254,10 @@ defmodule Tanks.GameLogic.Battle do
 
   # Get all tanks
   def handle_call(:get_state, _from, state) do
-    tanks =
-      state.tanks
-      |> Map.values()
-      |> Enum.map(&Tank.get_state(&1))
+    tanks = get_tank_states(state.tanks)
 
-    {:reply, %{tanks: tanks, bullets: state.bullets}, state}
+    {:reply, %{tanks: tanks, bullets: state.bullets, remaining_ticks: state.remaining_ticks},
+     state}
   end
 
   # Get tank PID
@@ -228,6 +269,15 @@ defmodule Tanks.GameLogic.Battle do
   def handle_call(:count_tanks, _from, state) do
     {:reply, state.tanks |> Map.size(), state}
     # {:reply, Tanks.GameLogic.TankSupervisor.count_tanks(state.tank_sup_pid).active, state}
+  end
+
+  def handle_cast({:subscribe, id, pid}, state) do
+    Process.send(pid, {:broadcast, state.prev_broadcast}, [])
+    {:noreply, %Battle{state | subscribers: Map.put(state.subscribers, id, pid)}}
+  end
+
+  def handle_cast({:unsubscribe, id}, state) do
+    {:noreply, %Battle{state | subscribers: Map.delete(state.subscribers, id)}}
   end
 
   # Fire a bullet
@@ -244,10 +294,11 @@ defmodule Tanks.GameLogic.Battle do
     end
   end
 
-  def to_api(%{tanks: tanks, bullets: bullets}) do
-    %{
+  def to_api(%{tanks: tanks, bullets: bullets, remaining_ticks: remaining_ticks}) do
+    %Battle.Broadcast{
       tanks: tanks |> Enum.map(&Tank.to_api(&1)),
-      bullets: bullets |> Enum.map(&Bullet.to_api(&1))
+      bullets: bullets |> Enum.map(&Bullet.to_api(&1)),
+      remaining_time: (remaining_ticks * @tick_rate / 1000) |> round()
     }
   end
 
@@ -266,5 +317,11 @@ defmodule Tanks.GameLogic.Battle do
     |> Enum.filter(fn bullet ->
       Enum.all?(hit_bullets, fn hit_bullet -> hit_bullet != bullet end)
     end)
+  end
+
+  defp get_tank_states(tanks) do
+    tanks
+    |> Map.values()
+    |> Enum.map(&Tank.get_state(&1))
   end
 end

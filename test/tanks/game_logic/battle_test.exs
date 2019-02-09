@@ -14,9 +14,33 @@ defmodule BattleTest do
     :ok = Application.start(:tanks)
   end
 
+  test "Subscribing to game state broadcast" do
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
+
+    Battle.subscribe(game_pid, "id", self())
+
+    assert_receive {:broadcast, %Battle.Broadcast{}}
+  end
+
+  test "Broadcasting only when state changed" do
+    {:ok, tank_sup_pid} = TankSupervisor.start_link([])
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
+
+    Battle.subscribe(game_pid, "id", self())
+
+    for _ <- 0..30 do
+      Process.send(game_pid, :tick, [])
+    end
+
+    assert_receive {:broadcast, %Battle.Broadcast{remaining_time: 300}}
+    refute_receive {:broadcast, %Battle.Broadcast{remaining_time: 300}}
+    assert_receive {:broadcast, %Battle.Broadcast{remaining_time: 299}}
+  end
+
   test "Removing a tank also stops its process" do
     {:ok, tank_sup_pid} = TankSupervisor.start_link([])
-    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
     {:ok, pid} = Battle.create_tank(game_pid, "test")
     Battle.remove_tank(game_pid, "test")
 
@@ -25,7 +49,7 @@ defmodule BattleTest do
 
   test "Bullet out of field" do
     {:ok, tank_sup_pid} = TankSupervisor.start_link([])
-    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
     Battle.create_tank(game_pid, "test")
     Battle.fire(game_pid, "test")
 
@@ -42,7 +66,7 @@ defmodule BattleTest do
 
   test "Evaluate hits" do
     {:ok, tank_sup_pid} = TankSupervisor.start_link([])
-    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
     {:ok, tank_pid} = Battle.create_tank(game_pid, "test")
     tanks = [tank_pid]
 
@@ -58,12 +82,12 @@ defmodule BattleTest do
 
     hit_tank = Tank.get_state(tank_pid)
 
-    assert hit_tank == %Tank{health: 60}
+    assert hit_tank == %Tank{player_name: "test", health: 60}
   end
 
   test "Tank process restarts when killed" do
     {:ok, tank_sup_pid} = TankSupervisor.start_link([])
-    {:ok, game_pid} = Battle.start_link(tank_sup_pid)
+    {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
     {:ok, pid} = Battle.create_tank(game_pid, "test")
 
     Process.exit(pid, :kill)

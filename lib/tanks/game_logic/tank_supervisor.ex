@@ -9,8 +9,8 @@ defmodule Tanks.GameLogic.TankSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def add_tank(tank_sup_pid) do
-    DynamicSupervisor.start_child(tank_sup_pid, Tanks.GameLogic.Tank)
+  def add_tank(tank_sup_pid, player_name) do
+    DynamicSupervisor.start_child(tank_sup_pid, {Tanks.GameLogic.Tank, player_name})
   end
 
   def remove_tank(tank_sup_pid, tank_pid) do

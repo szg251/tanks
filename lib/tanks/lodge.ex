@@ -69,6 +69,10 @@ defmodule Tanks.Lodge do
     GenServer.cast(__MODULE__, {:close_battle, name, player_name})
   end
 
+  def close_battle(name) do
+    GenServer.cast(__MODULE__, {:close_battle, name})
+  end
+
   @doc """
   List battle servers
 
@@ -181,7 +185,7 @@ defmodule Tanks.Lodge do
 
   def handle_call({:start_battle, name, owner_name}, _from, state) do
     with {:ok, valid_name} <- name_valid?(name),
-         {:ok, pid} <- BattleSupervisor.start_battle(),
+         {:ok, pid} <- BattleSupervisor.start_battle(name),
          {:ok, usable_name} <-
            pipe_when(valid_name, &(!Map.has_key?(state.battles, &1)), "battle already exists"),
          {:ok, existing_player} <-
@@ -245,6 +249,17 @@ defmodule Tanks.Lodge do
 
   def handle_call(:list_players, _from, state) do
     {:reply, MapSet.to_list(state.players) |> Enum.map(&%{name: &1}), state}
+  end
+
+  def handle_cast({:close_battle, name}, state) do
+    with {:ok, battle_pid} <- Map.fetch(state.battles, name) do
+      BattleSupervisor.close_battle(battle_pid)
+      new_state = %Lodge{state | battles: Map.delete(state.battles, name)}
+      {:noreply, new_state}
+    else
+      _ ->
+        {:noreply, state}
+    end
   end
 
   def handle_cast({:close_battle, name, player_name}, state) do

@@ -4,24 +4,17 @@ defmodule TanksWeb.GameChannel do
   alias Tanks.GameLogic.Battle
   alias Tanks.GameLogic.Tank
 
-  @tick_rate 30
-
   def join("game:" <> battle_name, _payload, socket) do
     case Tanks.Lodge.get_battle(battle_name) do
       {:ok, battle} ->
         Battle.create_tank(battle.pid, socket.assigns.user_id)
 
-        schedule_push(%Battle{})
-        IO.inspect(socket.assigns.user_id)
+        Battle.subscribe(battle.pid, socket.assigns.user_id, self())
         {:ok, socket |> assign(:battle_pid, battle.pid)}
 
       {:error, reason} ->
         {:error, %{reason: reason}}
     end
-  end
-
-  defp schedule_push(prev_state) do
-    Process.send_after(self(), {:broadcast, prev_state}, @tick_rate)
   end
 
   def handle_in("move", %{"move" => velocity}, socket) do
@@ -41,15 +34,18 @@ defmodule TanksWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_info({:broadcast, prev_game_state}, socket) do
-    game_state = Battle.get_state(socket.assigns.battle_pid) |> Battle.to_api()
+  def handle_info({:broadcast, game_state}, socket) do
+    push(socket, "sync", game_state)
+    {:noreply, socket}
+  end
 
-    if game_state !== prev_game_state do
-      push(socket, "sync", game_state)
-      assign(socket, :game_state, game_state)
-    end
+  def handle_info({:end_battle, tanks}, socket) do
+    push(socket, "end_battle", %{tanks: tanks})
+    {:noreply, socket}
+  end
 
-    schedule_push(game_state)
+  def handle_info({:DOWN, error}, socket) do
+    IO.inspect(error)
     {:noreply, socket}
   end
 end
