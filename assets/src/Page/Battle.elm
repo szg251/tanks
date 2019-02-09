@@ -2,13 +2,14 @@ module Page.Battle exposing (Model, Msg, init, subscriptions, update, view)
 
 import Browser exposing (Document)
 import Browser.Dom
-import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize)
+import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize, onVisibilityChange)
 import Channel exposing (Channel, Socket)
 import Data.Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import GameState exposing (Bullet, GameState, Tank)
 import Html exposing (..)
 import Json.Decode as Decode exposing (Decoder)
+import KeyRegister exposing (Key, KeyRegister, KeyState(..))
 import Set exposing (Set)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
@@ -19,19 +20,10 @@ import Time exposing (Posix, every)
 type Msg
     = NoOp
     | FitWindowSize Window
-    | KeyUp Key
-    | KeyDown Key
+    | KeyRegisterMsg KeyRegister.Msg
     | GotSocket (Result Decode.Error Socket)
     | GotChannel (Result Decode.Error Channel)
     | GotChannelResponse (Result Decode.Error Channel.Response)
-
-
-type Key
-    = ArrowRight
-    | ArrowLeft
-    | ArrowUp
-    | ArrowDown
-    | SpaceBar
 
 
 type alias Model =
@@ -40,6 +32,7 @@ type alias Model =
     , battleName : String20
     , session : Session
     , channel : Maybe Channel
+    , keyRegister : KeyRegister
     }
 
 
@@ -64,6 +57,7 @@ init session battleName =
       , battleName = battleName
       , session = session
       , channel = Nothing
+      , keyRegister = KeyRegister.init
       }
     , case session.player of
         Nothing ->
@@ -100,54 +94,6 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        KeyDown key ->
-            ( model
-            , case model.channel of
-                Just channel ->
-                    case key of
-                        ArrowRight ->
-                            Channel.moveTank channel 1
-
-                        ArrowLeft ->
-                            Channel.moveTank channel -1
-
-                        ArrowUp ->
-                            Channel.moveTurret channel 0.1
-
-                        ArrowDown ->
-                            Channel.moveTurret channel -0.1
-
-                        SpaceBar ->
-                            Channel.fire channel
-
-                Nothing ->
-                    Cmd.none
-            )
-
-        KeyUp key ->
-            ( model
-            , case model.channel of
-                Just channel ->
-                    case key of
-                        ArrowRight ->
-                            Channel.moveTank channel 0
-
-                        ArrowLeft ->
-                            Channel.moveTank channel 0
-
-                        ArrowUp ->
-                            Channel.moveTurret channel 0
-
-                        ArrowDown ->
-                            Channel.moveTurret channel 0
-
-                        SpaceBar ->
-                            Cmd.none
-
-                Nothing ->
-                    Cmd.none
-            )
-
         FitWindowSize window ->
             ( { model | window = window }, Cmd.none )
 
@@ -170,41 +116,73 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        KeyRegisterMsg subMsg ->
+            let
+                ( keyRegister, keyChanges ) =
+                    KeyRegister.update subMsg model.keyRegister
+            in
+            case model.channel of
+                Nothing ->
+                    ( { model | keyRegister = keyRegister }, Cmd.none )
+
+                Just channel ->
+                    ( { model | keyRegister = keyRegister }, handleKeys channel keyChanges )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ onKeyUp (keyDecoder KeyUp)
-        , onKeyDown (keyDecoder KeyDown)
-        , onResize Window
-            |> Sub.map FitWindowSize
+        [ onKeyUp KeyRegister.onKeyUp |> Sub.map KeyRegisterMsg
+        , onKeyDown KeyRegister.onKeyDown |> Sub.map KeyRegisterMsg
+        , onVisibilityChange KeyRegister.onVisibilityChange |> Sub.map KeyRegisterMsg
+        , onResize Window |> Sub.map FitWindowSize
         , Channel.subscribe GotSocket GotChannel GotChannelResponse
         ]
 
 
-keyDecoder : (Key -> Msg) -> Decoder Msg
-keyDecoder toMsg =
+handleKeys : Channel -> List Key -> Cmd Msg
+handleKeys channel keys =
     let
-        toKey key =
-            case key of
-                "ArrowUp" ->
-                    Decode.succeed ArrowUp
-
-                "ArrowDown" ->
-                    Decode.succeed ArrowDown
-
+        toCmd { id, state } =
+            case id of
                 "ArrowLeft" ->
-                    Decode.succeed ArrowLeft
+                    if state == KeyDown then
+                        Channel.moveTank channel -1
+
+                    else
+                        Channel.moveTank channel 0
 
                 "ArrowRight" ->
-                    Decode.succeed ArrowRight
+                    if state == KeyDown then
+                        Channel.moveTank channel 1
+
+                    else
+                        Channel.moveTank channel 0
+
+                "ArrowUp" ->
+                    if state == KeyDown then
+                        Channel.moveTurret channel 0.1
+
+                    else
+                        Channel.moveTurret channel 0
+
+                "ArrowDown" ->
+                    if state == KeyDown then
+                        Channel.moveTurret channel -0.1
+
+                    else
+                        Channel.moveTurret channel 0
 
                 " " ->
-                    Decode.succeed SpaceBar
+                    if state == KeyDown then
+                        Channel.fire channel
+
+                    else
+                        Cmd.none
 
                 _ ->
-                    Decode.fail "Not a controller key"
+                    Cmd.none
     in
-    Decode.field "key" Decode.string
-        |> Decode.andThen toKey
-        |> Decode.map toMsg
+    keys
+        |> List.map toCmd
+        |> Cmd.batch
