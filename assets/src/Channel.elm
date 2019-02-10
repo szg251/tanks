@@ -12,7 +12,6 @@ port module Channel exposing
     )
 
 import Debug
-
 import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
