@@ -10,6 +10,7 @@ module GameState exposing
     )
 
 import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (required)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
@@ -17,6 +18,7 @@ import Svg.Attributes exposing (..)
 type alias GameState =
     { tanks : List Tank
     , bullets : List Bullet
+    , remainingTime : Int
     }
 
 
@@ -232,9 +234,10 @@ viewBullet p =
 
 decoder : Decoder GameState
 decoder =
-    Decode.map2 GameState
+    Decode.map3 GameState
         (Decode.field "tanks" (Decode.list tankDecoder))
         (Decode.field "bullets" (Decode.list bulletDecoder))
+        (Decode.field "remaining_time" Decode.int)
 
 
 tankDecoder : Decoder Tank

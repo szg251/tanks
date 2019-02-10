@@ -59,7 +59,7 @@ getWindowSize =
 
 init : Session -> String20 -> ( Model, Cmd Msg )
 init session battleName =
-    ( { gameState = { tanks = [], bullets = [] }
+    ( { gameState = { tanks = [], bullets = [], remainingTime = 0 }
       , window = { width = 1000, height = 600 }
       , battleName = battleName
       , session = session
@@ -99,11 +99,15 @@ view model =
                 )
             ]
             (column []
-                [ Element.html <|
+                [ row [ height (px 10), spacing 10 ]
+                    [ el [ height (px 10) ] (text "Remaining time:")
+                    , el [ height (px 10) ] (text <| toTime model.gameState.remainingTime)
+                    ]
+                , Element.html <|
                     Svg.svg
                         [ Svg.Attributes.viewBox "0 0 1000 600"
                         , Svg.Attributes.width <| String.fromInt (model.window.width - 10)
-                        , Svg.Attributes.height <| String.fromInt (model.window.height - 10)
+                        , Svg.Attributes.height <| String.fromInt (model.window.height - 20)
                         ]
                         (GameState.viewField
                             :: List.map GameState.viewTank model.gameState.tanks
@@ -113,6 +117,25 @@ view model =
             )
         ]
     }
+
+
+toTime : Int -> String
+toTime seconds =
+    let
+        mins =
+            String.fromInt (seconds // 60)
+
+        secs =
+            String.fromInt (modBy 60 seconds)
+    in
+    mins
+        ++ ":"
+        ++ (if String.length secs == 1 then
+                "0" ++ secs
+
+            else
+                secs
+           )
 
 
 viewResults : List Tank -> Element Msg
