@@ -3,6 +3,7 @@ module GameState exposing
     , GameState
     , Tank
     , decoder
+    , tankDecoder
     , viewBullet
     , viewField
     , viewTank
@@ -33,7 +34,8 @@ type Direction
 
 
 type alias Tank =
-    { x : Int
+    { playerName : String
+    , x : Int
     , y : Int
     , load : Int
     , turretAngle : Float
@@ -237,7 +239,8 @@ decoder =
 
 tankDecoder : Decoder Tank
 tankDecoder =
-    Decode.map6 Tank
+    Decode.map7 Tank
+        (Decode.field "player_name" Decode.string)
         (Decode.field "x" Decode.int)
         (Decode.field "y" Decode.int)
         (Decode.field "load" Decode.int)

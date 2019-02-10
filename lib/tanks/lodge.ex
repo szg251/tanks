@@ -252,7 +252,7 @@ defmodule Tanks.Lodge do
   end
 
   def handle_cast({:close_battle, name}, state) do
-    with {:ok, battle_pid} <- Map.fetch(state.battles, name) do
+    with {:ok, {battle_pid, _}} <- Map.fetch(state.battles, name) do
       BattleSupervisor.close_battle(battle_pid)
       new_state = %Lodge{state | battles: Map.delete(state.battles, name)}
       {:noreply, new_state}

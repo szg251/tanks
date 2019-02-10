@@ -6,13 +6,14 @@ import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize, 
 import Channel exposing (Channel, Socket)
 import Data.Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
+import Element exposing (..)
 import GameState exposing (Bullet, GameState, Tank)
-import Html exposing (..)
+import Html
 import Json.Decode as Decode exposing (Decoder)
 import KeyRegister exposing (Key, KeyRegister, KeyState(..))
 import Set exposing (Set)
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Svg
+import Svg.Attributes
 import Task
 import Time exposing (Posix, every)
 
@@ -33,7 +34,13 @@ type alias Model =
     , session : Session
     , channel : Maybe Channel
     , keyRegister : KeyRegister
+    , modal : Modal
     }
+
+
+type Modal
+    = NoModal
+    | EndBattle (List Tank)
 
 
 type alias Window =
@@ -58,6 +65,7 @@ init session battleName =
       , session = session
       , channel = Nothing
       , keyRegister = KeyRegister.init
+      , modal = NoModal
       }
     , case session.player of
         Nothing ->
@@ -75,17 +83,61 @@ view : Model -> Document Msg
 view model =
     { title = "Battle"
     , body =
-        [ svg
-            [ viewBox "0 0 1000 600"
-            , width <| String.fromInt (model.window.width - 10)
-            , height <| String.fromInt (model.window.height - 10)
+        [ Element.layout
+            [ inFront
+                (case model.modal of
+                    NoModal ->
+                        Element.none
+
+                    EndBattle tanks ->
+                        column
+                            [ width (px 500), centerX, centerY ]
+                            [ el [ centerX ] (text "Battle Ended")
+                            , viewResults tanks
+                            , link [ centerX ] { label = text "back to top", url = "/" }
+                            ]
+                )
             ]
-            (GameState.viewField
-                :: List.map GameState.viewTank model.gameState.tanks
-                ++ List.map GameState.viewBullet model.gameState.bullets
+            (column []
+                [ Element.html <|
+                    Svg.svg
+                        [ Svg.Attributes.viewBox "0 0 1000 600"
+                        , Svg.Attributes.width <| String.fromInt (model.window.width - 10)
+                        , Svg.Attributes.height <| String.fromInt (model.window.height - 10)
+                        ]
+                        (GameState.viewField
+                            :: List.map GameState.viewTank model.gameState.tanks
+                            ++ List.map GameState.viewBullet model.gameState.bullets
+                        )
+                ]
             )
         ]
     }
+
+
+viewResults : List Tank -> Element Msg
+viewResults tanks =
+    let
+        columns =
+            [ { header = text "Name"
+              , width = fill
+              , view = .playerName >> text
+              }
+            , { header = text "HP"
+              , width = shrink
+              , view = .health >> String.fromInt >> text
+              }
+            ]
+
+        tanksByHealth =
+            tanks
+                |> List.sortBy .health
+                |> List.reverse
+    in
+    column [ width fill ]
+        [ el [ centerX ] (text "Players")
+        , table [ spacing 10 ] { data = tanksByHealth, columns = columns }
+        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -112,6 +164,9 @@ update msg model =
             case response of
                 Ok (Channel.Sync gameState) ->
                     ( { model | gameState = gameState }, Cmd.none )
+
+                Ok (Channel.EndBattle tanks) ->
+                    ( { model | modal = EndBattle tanks }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )

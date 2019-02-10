@@ -44,6 +44,15 @@ app.ports.channelFromElm.subscribe(({ msg, payload }) => {
             }
           })
         })
+        channel.on("end_battle", value => {
+          app.ports.channelToElm.send({
+            msg: "got_channel_event",
+            payload: {
+              event: "end_battle",
+              value
+            }
+          })
+        })
       })
       app.ports.channelToElm.send({ msg: "got_channel", payload: { channel } })
       return
