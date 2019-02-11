@@ -8,9 +8,14 @@ module Validated exposing
     , map
     , max
     , min
+    , noSpecialChars
+    , regex
     , toMaybe
     , value
     )
+
+import Maybe.Extra as MaybeE
+import Regex
 
 
 type Validated value
@@ -47,22 +52,43 @@ type alias Validator value =
     value -> Validated value
 
 
-min : Int -> String -> Validator String
-min n message val =
-    if String.length val >= n then
+custom : (value -> Bool) -> String -> Validator value
+custom condition message val =
+    if condition val then
         Valid val
 
     else
         Invalid message val
+
+
+fail : String -> Validator String
+fail message =
+    Invalid message
+
+
+min : Int -> String -> Validator String
+min n message =
+    custom (\val -> String.length val >= n) message
 
 
 max : Int -> String -> Validator String
-max n message val =
-    if String.length val <= n then
-        Valid val
+max n message =
+    custom (\val -> String.length val <= n) message
 
-    else
-        Invalid message val
+
+regex : String -> String -> Validator String
+regex regexString message =
+    let
+        regex_ =
+            Maybe.withDefault Regex.never <|
+                Regex.fromString regexString
+    in
+    custom (\val -> Regex.contains regex_ val) message
+
+
+noSpecialChars : String -> Validator String
+noSpecialChars message =
+    regex "^[a-zA-Z0-9_]*$" message
 
 
 compose : Validator value -> Validator value -> Validator value

@@ -9,11 +9,11 @@ defmodule Tanks.BattleSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def start_battle() do
+  def start_battle(name) do
     {:ok, tank_sup_pid} =
       DynamicSupervisor.start_child(__MODULE__, Tanks.GameLogic.TankSupervisor)
 
-    DynamicSupervisor.start_child(__MODULE__, {Tanks.GameLogic.Battle, tank_sup_pid})
+    DynamicSupervisor.start_child(__MODULE__, {Tanks.GameLogic.Battle, {tank_sup_pid, name}})
   end
 
   def close_battle(battle_pid) do

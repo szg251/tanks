@@ -3,12 +3,14 @@ module GameState exposing
     , GameState
     , Tank
     , decoder
+    , tankDecoder
     , viewBullet
     , viewField
     , viewTank
     )
 
 import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (required)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
@@ -16,6 +18,7 @@ import Svg.Attributes exposing (..)
 type alias GameState =
     { tanks : List Tank
     , bullets : List Bullet
+    , remainingTime : Int
     }
 
 
@@ -33,7 +36,8 @@ type Direction
 
 
 type alias Tank =
-    { x : Int
+    { playerName : String
+    , x : Int
     , y : Int
     , load : Int
     , turretAngle : Float
@@ -230,14 +234,16 @@ viewBullet p =
 
 decoder : Decoder GameState
 decoder =
-    Decode.map2 GameState
+    Decode.map3 GameState
         (Decode.field "tanks" (Decode.list tankDecoder))
         (Decode.field "bullets" (Decode.list bulletDecoder))
+        (Decode.field "remaining_time" Decode.int)
 
 
 tankDecoder : Decoder Tank
 tankDecoder =
-    Decode.map6 Tank
+    Decode.map7 Tank
+        (Decode.field "player_name" Decode.string)
         (Decode.field "x" Decode.int)
         (Decode.field "y" Decode.int)
         (Decode.field "load" Decode.int)

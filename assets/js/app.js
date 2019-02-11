@@ -21,10 +21,7 @@ import socket from "./socket"
 import { Elm } from "../src/Main.elm"
 
 const app = Elm.Main.init({
-  node: document.getElementById("elm-node"),
-  flags: {
-    playerName: localStorage.getItem("player_name")
-  }
+  node: document.getElementById("elm-node")
 })
 
 app.ports.channelFromElm.subscribe(({ msg, payload }) => {
@@ -43,6 +40,15 @@ app.ports.channelFromElm.subscribe(({ msg, payload }) => {
             msg: "got_channel_event",
             payload: {
               event: "sync",
+              value
+            }
+          })
+        })
+        channel.on("end_battle", value => {
+          app.ports.channelToElm.send({
+            msg: "got_channel_event",
+            payload: {
+              event: "end_battle",
               value
             }
           })

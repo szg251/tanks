@@ -11,6 +11,7 @@ port module Channel exposing
     , subscribe
     )
 
+import Debug
 import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
@@ -72,6 +73,7 @@ type alias Push =
 
 type Response
     = Sync GameState
+    | EndBattle (List Tank)
 
 
 type alias GotSocket msg =
@@ -124,10 +126,14 @@ responseDecoder : Decoder Response
 responseDecoder =
     let
         decodeHelper event =
-            case event of
+            case event |> Debug.log "event" of
                 "sync" ->
                     Decode.field "value" GameState.decoder
                         |> Decode.map Sync
+
+                "end_battle" ->
+                    Decode.field "value" (Decode.field "tanks" (Decode.list GameState.tankDecoder))
+                        |> Decode.map EndBattle
 
                 _ ->
                     Decode.fail "unknown channel event"

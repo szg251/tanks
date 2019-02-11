@@ -12,8 +12,9 @@ defmodule Tanks.GameLogic.Tank do
   @bullet_velocity 8
   @loading_speed 1
 
-  @derive {Jason.Encoder, only: [:health, :x, :y, :turret_angle, :load, :direction]}
-  defstruct health: 100,
+  @derive {Jason.Encoder, only: [:player_name, :health, :x, :y, :turret_angle, :load, :direction]}
+  defstruct player_name: "",
+            health: 100,
             width: 60,
             height: 40,
             x: 0,
@@ -33,8 +34,8 @@ defmodule Tanks.GameLogic.Tank do
     }
   end
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts)
+  def start_link(player_name) do
+    GenServer.start_link(__MODULE__, {:ok, player_name}, [])
   end
 
   @doc """
@@ -42,9 +43,9 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{}
+    %Tanks.GameLogic.Tank{player_name: "test"}
 
   """
   def get_state(tankPid) do
@@ -56,10 +57,10 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.set_movement(pid, -10)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{velocity_x: -5}
+    %Tanks.GameLogic.Tank{velocity_x: -5, player_name: "test"}
 
   """
   def set_movement(tankPid, velocity) do
@@ -71,15 +72,15 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Examples
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.01)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{turret_angle_velocity: 0.01}
+    %Tanks.GameLogic.Tank{player_name: "test", turret_angle_velocity: 0.01}
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, -0.7)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{turret_angle_velocity: -0.03}
+    %Tanks.GameLogic.Tank{player_name: "test", turret_angle_velocity: -0.03}
 
   """
   def set_turret_angle_velocity(tankPid, angle) do
@@ -91,13 +92,13 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.set_movement(pid, 10)
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.03)
     iex> Tanks.GameLogic.Tank.fire(pid)
     iex> Tanks.GameLogic.Tank.eval(pid)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{velocity_x: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03, load: 1}
+    %Tanks.GameLogic.Tank{player_name: "test", velocity_x: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03, load: 1}
 
   """
   def eval(tankPid) do
@@ -109,7 +110,7 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.fire(pid)
     {:ok, %Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}}
 
@@ -121,10 +122,10 @@ defmodule Tanks.GameLogic.Tank do
   @doc """
   Injure hits
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link([])
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
     iex> Tanks.GameLogic.Tank.injure(pid, 10)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{health: 90}
+    %Tanks.GameLogic.Tank{player_name: "test", health: 90}
   """
   def injure(tankPid, health_penalty) do
     GenServer.cast(tankPid, {:injure, health_penalty})
@@ -134,8 +135,8 @@ defmodule Tanks.GameLogic.Tank do
   # SERVER #
   ##########
 
-  def init(:ok) do
-    {:ok, %Tank{}}
+  def init({:ok, player_name}) do
+    {:ok, %Tank{player_name: player_name}}
   end
 
   def handle_cast({:set_movement, velocity}, tank) do

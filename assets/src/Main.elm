@@ -33,21 +33,17 @@ type alias Model =
     }
 
 
-type alias Flags =
-    { playerName : Maybe String }
-
-
 type Page
     = ErrorPage ErrorPage.Error
     | Lodge Lodge.Model
     | Battle Battle.Model
 
 
-init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url navKey =
+init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url navKey =
     let
         session =
-            Session.init navKey flags.playerName
+            Session.init navKey Nothing
     in
     case initPageAtUrl session url of
         Just ( page, cmd ) ->
@@ -209,7 +205,7 @@ subscriptions model =
         ]
 
 
-main : Program Flags Model Msg
+main : Program () Model Msg
 main =
     Browser.application
         { init = init

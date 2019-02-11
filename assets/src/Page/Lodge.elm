@@ -14,11 +14,13 @@ import RemoteData exposing (RemoteData(..), WebData)
 import Request.Battles
 import Request.Players
 import Route exposing (Route(..))
-import Validated exposing (Validated(..))
+import Time
+import Validated exposing (Validated(..), Validator)
 
 
 type Msg
     = NoOp
+    | FetchBattles Time.Posix
     | GotSummaries (WebData (List BattleSummary))
     | GotNewBattle (WebData BattleSummary)
     | InputPlayerName String
@@ -54,9 +56,7 @@ init session =
       , battles = NotAsked
       , session = session
       }
-    , Cmd.batch
-        [ Request.Battles.requestList GotSummaries
-        ]
+    , Request.Battles.requestList GotSummaries
     )
 
 
@@ -190,6 +190,9 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
+        FetchBattles _ ->
+            ( model, Request.Battles.requestList GotSummaries )
+
         GotSummaries response ->
             ( { model | battles = response }, Cmd.none )
 
@@ -216,14 +219,14 @@ update msg model =
         InputPlayerName name ->
             let
                 playerName =
-                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+                    Validated.map String20.createTrim (nameValidator name)
             in
             ( { model | newPlayerName = playerName }, Cmd.none )
 
         InputBattleName name ->
             let
                 battleName =
-                    Validated.map String20.createTrim (Validated.min 1 "Please insert a name" name)
+                    Validated.map String20.createTrim (nameValidator name)
             in
             ( { model | newBattleName = battleName }, Cmd.none )
 
@@ -277,4 +280,12 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Time.every (10 * 1000) FetchBattles
+
+
+nameValidator : Validator String
+nameValidator =
+    Validated.combine
+        [ Validated.min 1 "Please insert a name"
+        , Validated.noSpecialChars "Special characters are not allowed"
+        ]
