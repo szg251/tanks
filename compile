@@ -1,0 +1,3 @@
+yarn deploy
+cd ..
+mix phx.digest
