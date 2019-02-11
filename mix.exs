@@ -41,7 +41,8 @@ defmodule Tanks.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:excheck, "~> 0.6", only: :test},
       {:triq, "~> 1.3.0", only: :test},
-      {:collidex, "~> 0.2.0"}
+      {:collidex, "~> 0.2.0"},
+      {:distillery, "~> 2.0"}
     ]
   end
 end
