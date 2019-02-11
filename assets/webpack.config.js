@@ -31,7 +31,8 @@ module.exports = (env, options) => ({
         use: {
           loader: "elm-webpack-loader",
           options: {
-            debug: options.mode === "development"
+            debug: options.mode === "development",
+            optimize: options.mode === "production"
           }
         }
       },
@@ -39,6 +40,39 @@ module.exports = (env, options) => ({
         test: /\.css$/,
         use: [MiniCssExtractPlugin.loader, "css-loader"]
       }
+    ]
+  },
+  optimization: {
+    minimizer: [
+      new UglifyJsPlugin({
+        uglifyOptions: {
+          compress: {
+            pure_funcs: [
+              "F2",
+              "F3",
+              "F4",
+              "F5",
+              "F6",
+              "F7",
+              "F8",
+              "F9",
+              "A2",
+              "A3",
+              "A4",
+              "A5",
+              "A6",
+              "A7",
+              "A8",
+              "A9"
+            ],
+            pure_getters: true,
+            keep_fargs: false,
+            unsafe_comps: true,
+            // unsafe: true,
+            passes: 3
+          }
+        }
+      })
     ]
   },
   plugins: [
