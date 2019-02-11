@@ -11,7 +11,6 @@ port module Channel exposing
     , subscribe
     )
 
-import Debug
 import GameState exposing (GameState, Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
@@ -126,7 +125,7 @@ responseDecoder : Decoder Response
 responseDecoder =
     let
         decodeHelper event =
-            case event |> Debug.log "event" of
+            case event of
                 "sync" ->
                     Decode.field "value" GameState.decoder
                         |> Decode.map Sync
