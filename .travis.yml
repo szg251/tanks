@@ -15,5 +15,8 @@ jobs:
         provider: script
         skip_cleanup: true
         script: bash scripts/deploy.sh
+        language: elixir
+        elixir: "1.8.0"
+        otp_release: "21.2"
         on:
           branch: master
