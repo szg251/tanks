@@ -11,12 +11,8 @@ jobs:
       before_script: cd assets
 
     - stage: "Deploy"
+      if: branch = master
       language: elixir
       elixir: "1.8.0"
       otp_release: "21.2"
-      deploy:
-        provider: script
-        skip_cleanup: true
-        script: bash scripts/deploy.sh
-        on:
-          branch: master
+      script: bash scripts/deploy.sh
