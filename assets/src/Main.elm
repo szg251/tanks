@@ -112,9 +112,18 @@ update msg model =
                     ( model, Nav.load url )
 
         UrlChanged url ->
+            let
+                unloadCmd =
+                    case model.page of
+                        Battle subModel ->
+                            Battle.unload subModel
+
+                        _ ->
+                            Cmd.none
+            in
             case initPageAtUrl model.session url of
-                Just ( page, cmd ) ->
-                    ( { model | page = page }, cmd )
+                Just ( page, initCmd ) ->
+                    ( { model | page = page }, Cmd.batch [ unloadCmd, initCmd ] )
 
                 Nothing ->
                     ( model, Cmd.none )

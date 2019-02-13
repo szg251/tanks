@@ -64,6 +64,12 @@ app.ports.channelFromElm.subscribe(({ msg, payload }) => {
       app.ports.channelToElm.send({ msg: "got_channel", payload: { channel } })
       return
     }
+
+    case "leave": {
+        const channel = payload.channel
+        channel.leave()
+        return
+    }
   }
 })
 
