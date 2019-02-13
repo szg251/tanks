@@ -1,15 +1,18 @@
-matrix:
+jobs:
   include:
-    - language: elixir
+    - stage: "Test"
+      language: elixir
       elixir: "1.8.0"
       otp_release: "21.2"
 
-    - language: elm
+    - stage: "Test"
+      language: elm
       elm: "0.19.0"
       before_script: cd assets
-
-deploy:
-  provider: script
-  script: deploy.sh
-  on:
-    branch: master
+    - stage: "Deploy"
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script: deploy.sh
+        on:
+          branch: master
