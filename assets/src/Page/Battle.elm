@@ -1,4 +1,4 @@
-module Page.Battle exposing (Model, Msg, init, subscriptions, update, view)
+module Page.Battle exposing (Model, Msg, init, subscriptions, unload, update, view)
 
 import Browser exposing (Document)
 import Browser.Dom
@@ -264,3 +264,13 @@ handleKeys channel keys =
     keys
         |> List.map toCmd
         |> Cmd.batch
+
+
+unload : Model -> Cmd msg
+unload model =
+    case model.channel of
+        Just channel ->
+            Channel.leave channel
+
+        Nothing ->
+            Cmd.none

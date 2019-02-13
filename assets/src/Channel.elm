@@ -5,6 +5,7 @@ port module Channel exposing
     , connect
     , fire
     , join
+    , leave
     , moveTank
     , moveTurret
     , push
@@ -63,6 +64,15 @@ push (Channel channel) { event, value } =
                 , ( "event", Encode.string event )
                 , ( "value", value )
                 ]
+        }
+
+
+leave : Channel -> Cmd msg
+leave (Channel channel) =
+    channelFromElm
+        { msg = "leave"
+        , payload =
+            Encode.object [ ( "channel", channel ) ]
         }
 
 
