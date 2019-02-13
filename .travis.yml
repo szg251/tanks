@@ -9,6 +9,7 @@ matrix:
       before_script: cd assets
 
 deploy:
+  provider: script
   script: deploy.sh
   on:
     branch: master
