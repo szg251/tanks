@@ -1,4 +1,4 @@
-module Data.Player exposing (Player, decoder, encode)
+module Data.Player exposing (Authenticated(..), Player, decoder, encode)
 
 import Data.String20 as String20 exposing (String20)
 import Json.Decode as Decode exposing (Decoder)
@@ -8,6 +8,12 @@ import Json.Encode as Encode exposing (Value)
 
 type alias Player =
     { name : String20 }
+
+
+type Authenticated entity
+    = NotAsked
+    | NoPlayer
+    | Authenticated entity
 
 
 decoder : Decoder Player

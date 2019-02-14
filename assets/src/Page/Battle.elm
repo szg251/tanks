@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Browser.Dom
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize, onVisibilityChange)
 import Channel exposing (Channel, Socket)
+import Data.Player exposing (Player)
 import Data.Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Element exposing (..)
@@ -57,8 +58,8 @@ getWindowSize =
         |> Task.perform (fromViewport >> FitWindowSize)
 
 
-init : Session -> String20 -> ( Model, Cmd Msg )
-init session battleName =
+init : Session -> Player -> String20 -> ( Model, Cmd Msg )
+init session player battleName =
     ( { gameState = { tanks = [], bullets = [], remainingTime = 0 }
       , window = { width = 1000, height = 600 }
       , battleName = battleName
@@ -67,15 +68,10 @@ init session battleName =
       , keyRegister = KeyRegister.init
       , modal = NoModal
       }
-    , case session.player of
-        Nothing ->
-            getWindowSize
-
-        Just { name } ->
-            Cmd.batch
-                [ Channel.connect (String20.value name)
-                , getWindowSize
-                ]
+    , Cmd.batch
+        [ Channel.connect (String20.value player.name)
+        , getWindowSize
+        ]
     )
 
 

@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Navigation as Nav
-import Data.Player exposing (Player)
+import Data.Player as Player exposing (Authenticated, Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Document
@@ -10,10 +10,11 @@ import Html exposing (Html)
 import LocalStorage
 import Page.Battle as Battle
 import Page.ErrorPage as ErrorPage
+import Page.Loading as Loading
 import Page.Lodge as Lodge
 import RemoteData exposing (RemoteData(..), WebData)
 import Request.Players
-import Route
+import Route exposing (Route)
 import Url exposing (Url)
 
 
@@ -37,6 +38,7 @@ type Page
     = ErrorPage ErrorPage.Error
     | Lodge Lodge.Model
     | Battle Battle.Model
+    | Loading Route
 
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -51,7 +53,7 @@ init _ url navKey =
               , navKey = navKey
               , session = session
               }
-            , Cmd.batch [ cmd, LocalStorage.getItem "player_name" ]
+            , cmd
             )
 
         Nothing ->
@@ -59,7 +61,7 @@ init _ url navKey =
               , navKey = navKey
               , session = session
               }
-            , LocalStorage.getItem "player_name"
+            , Cmd.none
             )
 
 
@@ -77,25 +79,42 @@ view model =
         ErrorPage error ->
             ErrorPage.view error
 
+        Loading route ->
+            Loading.view
+
+
+routeToPageCmd : Session -> Route -> ( Page, Cmd Msg )
+routeToPageCmd session route =
+    let
+        loadRoute =
+            ( Loading route, LocalStorage.getItem "player_name" )
+    in
+    case ( route, session.player ) of
+        ( _, Player.NotAsked ) ->
+            loadRoute
+
+        ( Route.Lodge, _ ) ->
+            Lodge.init session
+                |> Tuple.mapBoth
+                    Lodge
+                    (Cmd.map LodgeMsg)
+
+        ( Route.Battle battleName, Player.Authenticated player ) ->
+            Battle.init session player battleName
+                |> Tuple.mapBoth
+                    Battle
+                    (Cmd.map BattleMsg)
+
+        ( Route.Battle _, Player.NoPlayer ) ->
+            Lodge.init session
+                |> Tuple.mapBoth
+                    Lodge
+                    (Cmd.map LodgeMsg)
+
 
 initPageAtUrl : Session -> Url -> Maybe ( Page, Cmd Msg )
 initPageAtUrl session url =
-    let
-        routeToPageCmd route =
-            case route of
-                Route.Lodge ->
-                    Lodge.init session
-                        |> Tuple.mapBoth
-                            Lodge
-                            (Cmd.map LodgeMsg)
-
-                Route.Battle battleName ->
-                    Battle.init session battleName
-                        |> Tuple.mapBoth
-                            Battle
-                            (Cmd.map BattleMsg)
-    in
-    Maybe.map routeToPageCmd (Route.parseUrl url)
+    Maybe.map (routeToPageCmd session) (Route.parseUrl url)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -136,17 +155,28 @@ update msg model =
                             ( model, Request.Players.requestShow GotPlayerVerification { name = validName } )
 
                         Nothing ->
-                            updateSession (Session.setPlayer Nothing model.session) model
+                            updateSession (Session.setPlayer Player.NoPlayer model.session) model
 
                 _ ->
                     ( model, Cmd.none )
 
         GotPlayerVerification remotePlayer ->
             let
-                maybePlayer =
-                    RemoteData.toMaybe remotePlayer
+                authenticatedPlayer =
+                    case remotePlayer of
+                        Success player ->
+                            Player.Authenticated player
+
+                        Failure _ ->
+                            Player.NoPlayer
+
+                        _ ->
+                            Player.NotAsked
+
+                newSession =
+                    Session.setPlayer authenticatedPlayer model.session
             in
-            updateSession (Session.setPlayer maybePlayer model.session) model
+            updateSession newSession model
 
         LodgeMsg subMsg ->
             case model.page of
@@ -176,19 +206,22 @@ update msg model =
 updateSession : Session -> Model -> ( Model, Cmd Msg )
 updateSession session model =
     let
-        page =
+        ( page, cmd ) =
             case model.page of
                 Battle subModel ->
-                    Battle <| Session.updateSession session subModel
+                    ( Battle <| Session.updateSession session subModel, Cmd.none )
 
                 Lodge subModel ->
-                    Lodge <| Session.updateSession session subModel
+                    ( Lodge <| Session.updateSession session subModel, Cmd.none )
 
                 ErrorPage _ ->
-                    model.page
+                    ( model.page, Cmd.none )
+
+                Loading route ->
+                    routeToPageCmd model.session route
     in
     ( { model | page = page, session = session }
-    , Cmd.none
+    , cmd
     )
 
 
@@ -206,6 +239,9 @@ subscriptions model =
                         |> Sub.map BattleMsg
 
                 ErrorPage _ ->
+                    Sub.none
+
+                Loading _ ->
                     Sub.none
     in
     Sub.batch
