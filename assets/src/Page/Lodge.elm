@@ -3,7 +3,7 @@ module Page.Lodge exposing (Model, Msg, init, subscriptions, update, view)
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Data.BattleSummary as BattleSummary exposing (BattleInit, BattleSummary)
-import Data.Player exposing (Player)
+import Data.Player as Player exposing (Authenticated, Player)
 import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Element exposing (..)
@@ -45,10 +45,10 @@ init session =
     let
         playerName =
             case session.player of
-                Just { name } ->
+                Player.Authenticated { name } ->
                     Valid name
 
-                Nothing ->
+                _ ->
                     Valid String20.empty
     in
     ( { newPlayerName = playerName
@@ -88,8 +88,8 @@ viewHeader =
 
 viewUserForm : Session -> Validated String20 -> Element Msg
 viewUserForm session playerName =
-    case session.player of
-        Nothing ->
+    let
+        viewForm =
             column []
                 [ row [ paddingEach { left = 150, top = 0, right = 0, bottom = 0 } ]
                     [ text <| Validated.error playerName ]
@@ -112,8 +112,15 @@ viewUserForm session playerName =
                         }
                     ]
                 ]
+    in
+    case session.player of
+        Player.NoPlayer ->
+            viewForm
 
-        Just { name } ->
+        Player.NotAsked ->
+            viewForm
+
+        Player.Authenticated { name } ->
             row [ width fill, spacing 10 ]
                 [ el [ width (px 150), centerY ] (text "Player name:")
                 , el [] (text <| String20.value name)
@@ -125,10 +132,7 @@ viewUserForm session playerName =
 viewCreateBattleForm : Session -> Validated String20 -> Element Msg
 viewCreateBattleForm session battleName =
     case session.player of
-        Nothing ->
-            Element.none
-
-        Just player ->
+        Player.Authenticated player ->
             column []
                 [ row [ paddingEach { left = 150, top = 0, right = 0, bottom = 0 } ]
                     [ text <| Validated.error battleName ]
@@ -152,6 +156,9 @@ viewCreateBattleForm session battleName =
                     ]
                 ]
 
+        _ ->
+            Element.none
+
 
 viewBattles : Session -> List BattleSummary -> Element Msg
 viewBattles session battles =
@@ -170,11 +177,11 @@ viewBattles session battles =
               , view =
                     \{ name } ->
                         case session.player of
-                            Nothing ->
-                                Element.none
-
-                            Just _ ->
+                            Player.Authenticated _ ->
                                 link [ alignRight ] { url = Route.toPath (Battle name), label = text "Join" }
+
+                            _ ->
+                                Element.none
               }
             ]
     in
@@ -260,10 +267,10 @@ update msg model =
 
         EditName ->
             case model.session.player of
-                Just player ->
+                Player.Authenticated player ->
                     ( model, Request.Players.requestDelete PlayerDeleted player )
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
         PlayerDeleted response ->
