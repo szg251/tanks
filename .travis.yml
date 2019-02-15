@@ -11,7 +11,7 @@ jobs:
       before_script: cd assets
 
     - stage: "Deploy"
-      if: branch = master
+      if: branch = master AND type = push
       language: elixir
       elixir: "1.8.0"
       otp_release: "21.2"
