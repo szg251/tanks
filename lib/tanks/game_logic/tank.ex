@@ -34,8 +34,8 @@ defmodule Tanks.GameLogic.Tank do
     }
   end
 
-  def start_link(player_name) do
-    GenServer.start_link(__MODULE__, {:ok, player_name}, [])
+  def start_link({player_name, seed}) do
+    GenServer.start_link(__MODULE__, {:ok, player_name, seed}, [])
   end
 
   @doc """
@@ -43,9 +43,9 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test"}
+    %Tanks.GameLogic.Tank{x: 16, player_name: "test"}
 
   """
   def get_state(tankPid) do
@@ -57,10 +57,10 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.set_movement(pid, -10)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{velocity_x: -5, player_name: "test"}
+    %Tanks.GameLogic.Tank{x: 16, velocity_x: -5, player_name: "test"}
 
   """
   def set_movement(tankPid, velocity) do
@@ -72,15 +72,15 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Examples
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.01)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test", turret_angle_velocity: 0.01}
+    %Tanks.GameLogic.Tank{x: 16, player_name: "test", turret_angle_velocity: 0.01}
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, -0.7)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test", turret_angle_velocity: -0.03}
+    %Tanks.GameLogic.Tank{x: 16, player_name: "test", turret_angle_velocity: -0.03}
 
   """
   def set_turret_angle_velocity(tankPid, angle) do
@@ -92,13 +92,13 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.set_movement(pid, 10)
     iex> Tanks.GameLogic.Tank.set_turret_angle_velocity(pid, 0.03)
     iex> Tanks.GameLogic.Tank.fire(pid)
     iex> Tanks.GameLogic.Tank.eval(pid)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test", velocity_x: 5, turret_angle_velocity: 0.03, x: 5, turret_angle: 0.03, load: 1}
+    %Tanks.GameLogic.Tank{player_name: "test", velocity_x: 5, turret_angle_velocity: 0.03, x: 21, turret_angle: 0.03, load: 1}
 
   """
   def eval(tankPid) do
@@ -110,9 +110,9 @@ defmodule Tanks.GameLogic.Tank do
 
     ## Example
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.fire(pid)
-    {:ok, %Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}}
+    {:ok, %Bullet{x: 86, y: 574, velocity_x: 8, velocity_y: 0}}
 
   """
   def fire(tankPid) do
@@ -122,10 +122,10 @@ defmodule Tanks.GameLogic.Tank do
   @doc """
   Injure hits
 
-    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link("test")
+    iex> {:ok, pid} = Tanks.GameLogic.Tank.start_link({ "test", 0 })
     iex> Tanks.GameLogic.Tank.injure(pid, 10)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test", health: 90}
+    %Tanks.GameLogic.Tank{x: 16, player_name: "test", health: 90}
   """
   def injure(tankPid, health_penalty) do
     GenServer.cast(tankPid, {:injure, health_penalty})
@@ -135,8 +135,8 @@ defmodule Tanks.GameLogic.Tank do
   # SERVER #
   ##########
 
-  def init({:ok, player_name}) do
-    {:ok, %Tank{player_name: player_name}}
+  def init({:ok, player_name, seed}) do
+    {:ok, %Tank{player_name: player_name} |> Field.randomize_position(seed)}
   end
 
   def handle_cast({:set_movement, velocity}, tank) do

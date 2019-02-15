@@ -46,8 +46,8 @@ defmodule Tanks.GameLogic.Battle do
     true
 
   """
-  def create_tank(game_pid, player_name) do
-    GenServer.call(game_pid, {:create_tank, player_name})
+  def create_tank(game_pid, player_name, seed \\ :erlang.now()) do
+    GenServer.call(game_pid, {:create_tank, player_name, seed})
   end
 
   @doc """
@@ -83,9 +83,9 @@ defmodule Tanks.GameLogic.Battle do
 
     iex> {:ok, tank_sup_pid} = Tanks.GameLogic.TankSupervisor.start_link([])
     iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
-    iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
+    iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test", 0)
     iex> Tanks.GameLogic.Battle.get_state(game_pid)
-    %{tanks: [%Tanks.GameLogic.Tank{player_name: "test"}], bullets: [], remaining_ticks: 5 * 2_000}
+    %{tanks: [%Tanks.GameLogic.Tank{x: 16, player_name: "test"}], bullets: [], remaining_ticks: 5 * 2_000}
 
   """
   def get_state(game_pid) do
@@ -145,8 +145,8 @@ defmodule Tanks.GameLogic.Battle do
     iex> {:ok, game_pid} = Tanks.GameLogic.Battle.start_link({tank_sup_pid, "test"})
     iex> Tanks.GameLogic.Battle.create_tank(game_pid, "test")
     iex> Tanks.GameLogic.Battle.fire(game_pid, "test")
-    iex> Tanks.GameLogic.Battle.get_state(game_pid).bullets
-    [%Bullet{x: 70, y: 574, velocity_x: 8, velocity_y: 0}]
+    iex> Tanks.GameLogic.Battle.get_state(game_pid).bullets |> length
+    1
 
   """
   def fire(game_pid, player_name) do
@@ -228,9 +228,11 @@ defmodule Tanks.GameLogic.Battle do
   end
 
   # Create a new tank
-  def handle_call({:create_tank, player_name}, _from, state) do
+  def handle_call({:create_tank, player_name, seed}, _from, state) do
     if !Map.has_key?(state.tanks, player_name) do
-      {:ok, tank_pid} = Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid, player_name)
+      {:ok, tank_pid} =
+        Tanks.GameLogic.TankSupervisor.add_tank(state.tank_sup_pid, player_name, seed)
+
       Process.monitor(tank_pid)
 
       newState = %Battle{state | tanks: state.tanks |> Map.put_new(player_name, tank_pid)}

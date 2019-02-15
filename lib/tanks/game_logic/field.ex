@@ -4,6 +4,19 @@ defmodule Tanks.GameLogic.Field do
   @gravity 0.1
 
   @doc """
+  Randomize the position of an object on the field
+
+    iex> Tanks.GameLogic.Field.randomize_position(%{width: 60, x: 0}, 0)
+    %{width: 60, x: 16}
+
+  """
+  def randomize_position(object, seed) when is_map(object) do
+    :random.seed(seed)
+    new_x = :random.uniform(@field_width - object.width)
+    %{object | x: new_x}
+  end
+
+  @doc """
   Moving an object on the field
   results in :error if out of boundaries
 

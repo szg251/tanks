@@ -8,15 +8,15 @@ defmodule TankTest do
   doctest Tanks.GameLogic.Bullet
 
   test "Firing a bullet resets load counter" do
-    {:ok, pid} = Tank.start_link("test")
+    {:ok, pid} = Tank.start_link({"test", 0})
     Tank.fire(pid)
 
     tank = Tank.get_state(pid)
-    assert tank == %Tank{player_name: "test", load: 0}
+    assert tank == %Tank{x: 16, player_name: "test", load: 0}
   end
 
   test "Cannot fire while loading" do
-    {:ok, pid} = Tank.start_link("test")
+    {:ok, pid} = Tank.start_link({"test", 0})
     Tank.fire(pid)
     bullet = Tank.fire(pid)
 
@@ -24,14 +24,14 @@ defmodule TankTest do
   end
 
   test "Cannot fire when dead" do
-    {:ok, pid} = Tank.start_link("test")
+    {:ok, pid} = Tank.start_link({"test", 0})
     Tank.injure(pid, 100)
 
     assert Tank.fire(pid) == :error
   end
 
   test "Firing from different turret angles" do
-    {:ok, pid} = Tank.start_link("test")
+    {:ok, pid} = Tank.start_link({"test", 0})
     {:ok, bullet1} = Tank.fire(pid)
 
     Tank.set_turret_angle_velocity(pid, 0.04)
