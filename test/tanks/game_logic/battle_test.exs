@@ -67,13 +67,13 @@ defmodule BattleTest do
   test "Evaluate hits" do
     {:ok, tank_sup_pid} = TankSupervisor.start_link([])
     {:ok, game_pid} = Battle.start_link({tank_sup_pid, "name"})
-    {:ok, tank_pid} = Battle.create_tank(game_pid, "test")
+    {:ok, tank_pid} = Battle.create_tank(game_pid, "test", 0)
     tanks = [tank_pid]
 
     bullets = [
-      %Bullet{width: 3, height: 3, x: 10, y: 560, velocity_x: 0, velocity_y: 0},
-      %Bullet{width: 3, height: 3, x: 15, y: 560, velocity_x: 0, velocity_y: 0},
-      %Bullet{width: 3, height: 3, x: 10, y: 450, velocity_x: 0, velocity_y: 0}
+      %Bullet{width: 3, height: 3, x: 26, y: 560, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 21, y: 560, velocity_x: 0, velocity_y: 0},
+      %Bullet{width: 3, height: 3, x: 26, y: 450, velocity_x: 0, velocity_y: 0}
     ]
 
     remained_bullets = Battle.get_hits(tanks, bullets)
@@ -82,7 +82,7 @@ defmodule BattleTest do
 
     hit_tank = Tank.get_state(tank_pid)
 
-    assert hit_tank == %Tank{player_name: "test", health: 60}
+    assert hit_tank == %Tank{x: 16, player_name: "test", health: 60}
   end
 
   test "Tank process restarts when killed" do
