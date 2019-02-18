@@ -298,11 +298,17 @@ defmodule Tanks.GameLogic.Battle do
     end
   end
 
+  ## HELPERS
+
+  def ticks_to_seconds(ticks) do
+    (ticks * @tick_rate / 1000) |> round()
+  end
+
   def to_api(%{tanks: tanks, bullets: bullets, remaining_ticks: remaining_ticks}) do
     %Battle.Broadcast{
       tanks: tanks |> Enum.map(&Tank.to_api(&1)),
       bullets: bullets |> Enum.map(&Bullet.to_api(&1)),
-      remaining_time: (remaining_ticks * @tick_rate / 1000) |> round()
+      remaining_time: remaining_ticks |> ticks_to_seconds
     }
   end
 

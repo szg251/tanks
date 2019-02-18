@@ -12,9 +12,8 @@ defmodule Tanks.GameLogic.Tank do
   @bullet_velocity 8
   @loading_speed 1
 
-  @derive {Jason.Encoder, only: [:player_name, :health, :x, :y, :turret_angle, :load, :direction]}
   defstruct player_name: "",
-            alive_time: 0,
+            alive_ticks: 0,
             health: 100,
             width: 60,
             height: 40,
@@ -28,10 +27,15 @@ defmodule Tanks.GameLogic.Tank do
             turret_angle_velocity: 0.0
 
   def to_api(tank) do
-    %Tank{
-      tank
-      | x: round(tank.x),
-        y: round(tank.y)
+    %{
+      player_name: tank.player_name,
+      x: round(tank.x),
+      y: round(tank.y),
+      health: tank.health,
+      turret_angle: tank.turret_angle,
+      load: tank.load,
+      direction: tank.direction,
+      alive_time: tank.alive_ticks |> Tanks.GameLogic.Battle.ticks_to_seconds()
     }
   end
 
@@ -99,7 +103,7 @@ defmodule Tanks.GameLogic.Tank do
     iex> Tanks.GameLogic.Tank.fire(pid)
     iex> Tanks.GameLogic.Tank.eval(pid)
     iex> Tanks.GameLogic.Tank.get_state(pid)
-    %Tanks.GameLogic.Tank{player_name: "test", velocity_x: 5, turret_angle_velocity: 0.03, x: 21, turret_angle: 0.03, load: 1, alive_time: 1}
+    %Tanks.GameLogic.Tank{player_name: "test", velocity_x: 5, turret_angle_velocity: 0.03, x: 21, turret_angle: 0.03, load: 1, alive_ticks: 1}
 
   """
   def eval(tankPid) do
@@ -157,7 +161,7 @@ defmodule Tanks.GameLogic.Tank do
         |> switch_direction()
         |> move_turret()
         |> load_bullet()
-        |> increment_alive_time()
+        |> increment_alive_ticks()
 
       {:noreply, new_tank}
     else
@@ -238,7 +242,7 @@ defmodule Tanks.GameLogic.Tank do
     }
   end
 
-  defp increment_alive_time(tank) do
-    %Tank{tank | alive_time: tank.alive_time + 1}
+  defp increment_alive_ticks(tank) do
+    %Tank{tank | alive_ticks: tank.alive_ticks + 1}
   end
 end
