@@ -142,20 +142,25 @@ viewResults tanks =
               , width = fill
               , view = .playerName >> text
               }
+            , { header = text "Alive time"
+              , width = shrink
+              , view = .aliveTime >> String.fromInt >> text
+              }
             , { header = text "HP"
               , width = shrink
               , view = .health >> String.fromInt >> text
               }
             ]
 
-        tanksByHealth =
+        tanksSorted =
             tanks
                 |> List.sortBy .health
+                |> List.sortBy .aliveTime
                 |> List.reverse
     in
     column [ width fill ]
         [ el [ centerX ] (text "Players")
-        , table [ spacing 10 ] { data = tanksByHealth, columns = columns }
+        , table [ spacing 10 ] { data = tanksSorted, columns = columns }
         ]
 
 
