@@ -154,8 +154,8 @@ viewResults tanks =
 
         tanksSorted =
             tanks
-                |> List.sortBy .health
                 |> List.sortBy .aliveTime
+                |> List.sortBy .health
                 |> List.reverse
     in
     column [ width fill ]
