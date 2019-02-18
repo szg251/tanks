@@ -172,7 +172,7 @@ defmodule Tanks.GameLogic.Battle do
 
     tank_pids |> Enum.each(&Tank.eval(&1))
 
-    bullets =
+    moved_bullets =
       state.bullets
       |> Enum.reduce([], fn bullet, acc ->
         case Bullet.move(bullet) do
@@ -181,15 +181,19 @@ defmodule Tanks.GameLogic.Battle do
         end
       end)
 
-    remaining_bullets = Battle.get_hits(tank_pids, bullets)
+    remaining_bullets = Battle.get_hits(tank_pids, moved_bullets)
     remaining_ticks = state.remaining_ticks - 1
 
+    tank_states = get_tank_states(tank_pids)
     new_state = %Battle{state | bullets: remaining_bullets, remaining_ticks: remaining_ticks}
 
-    if remaining_ticks > 0 do
+    game_over = count_alive_tanks(tank_pids) <= 1 and length(tank_pids) > 1
+
+    # Broadcast state only if there is time left or two or more players are alive
+    if remaining_ticks > 0 and !game_over do
       next_broadcast =
         %{
-          tanks: get_tank_states(state.tanks),
+          tanks: tank_states,
           bullets: remaining_bullets,
           remaining_ticks: remaining_ticks
         }
@@ -204,11 +208,9 @@ defmodule Tanks.GameLogic.Battle do
       schedule_tick()
       {:noreply, %{new_state | prev_broadcast: next_broadcast}}
     else
-      tanks = get_tank_states(state.tanks)
-
       state.subscribers
       |> Map.values()
-      |> Enum.each(&Process.send(&1, {:end_battle, tanks}, []))
+      |> Enum.each(&Process.send(&1, {:end_battle, tank_states}, []))
 
       Tanks.Lodge.close_battle(state.name)
       {:noreply, state}
@@ -321,9 +323,19 @@ defmodule Tanks.GameLogic.Battle do
     end)
   end
 
-  defp get_tank_states(tanks) do
+  defp get_tank_states(tanks) when is_map(tanks) do
     tanks
     |> Map.values()
     |> Enum.map(&Tank.get_state(&1))
+  end
+
+  defp get_tank_states(tanks) when is_list(tanks) do
+    tanks |> Enum.map(&Tank.get_state(&1))
+  end
+
+  defp count_alive_tanks(tanks) do
+    get_tank_states(tanks)
+    |> Enum.filter(fn tank -> tank.health > 0 end)
+    |> length()
   end
 end
