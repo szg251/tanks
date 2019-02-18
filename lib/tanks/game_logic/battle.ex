@@ -201,9 +201,11 @@ defmodule Tanks.GameLogic.Battle do
       schedule_tick()
       {:noreply, %{new_state | prev_broadcast: next_broadcast}}
     else
+      tank_broadcast = tank_states |> Enum.map(&Tank.Broadcast.from_tank(&1))
+
       state.subscribers
       |> Map.values()
-      |> Enum.each(&Process.send(&1, {:end_battle, tank_states}, []))
+      |> Enum.each(&Process.send(&1, {:end_battle, tank_broadcast}, []))
 
       Tanks.Lodge.close_battle(state.name)
       {:noreply, state}
@@ -265,7 +267,6 @@ defmodule Tanks.GameLogic.Battle do
   # Count tanks
   def handle_call(:count_tanks, _from, state) do
     {:reply, state.tanks |> Map.size(), state}
-    # {:reply, Tanks.GameLogic.TankSupervisor.count_tanks(state.tank_sup_pid).active, state}
   end
 
   def handle_cast({:subscribe, id, pid}, state) do
