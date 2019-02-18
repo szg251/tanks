@@ -5,7 +5,7 @@ defmodule TankTest do
   alias Tanks.GameLogic.Bullet
 
   doctest Tanks.GameLogic.Tank
-  doctest Tanks.GameLogic.Bullet
+  doctest Tanks.GameLogic.Tank.Broadcast
 
   test "Firing a bullet resets load counter" do
     {:ok, pid} = Tank.start_link({"test", 0})

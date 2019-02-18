@@ -43,6 +43,7 @@ type alias Tank =
     , turretAngle : Float
     , direction : Direction
     , health : Int
+    , aliveTime : Int
     }
 
 
@@ -234,29 +235,30 @@ viewBullet p =
 
 decoder : Decoder GameState
 decoder =
-    Decode.map3 GameState
-        (Decode.field "tanks" (Decode.list tankDecoder))
-        (Decode.field "bullets" (Decode.list bulletDecoder))
-        (Decode.field "remaining_time" Decode.int)
+    Decode.succeed GameState
+        |> required "tanks" (Decode.list tankDecoder)
+        |> required "bullets" (Decode.list bulletDecoder)
+        |> required "remaining_time" Decode.int
 
 
 tankDecoder : Decoder Tank
 tankDecoder =
-    Decode.map7 Tank
-        (Decode.field "player_name" Decode.string)
-        (Decode.field "x" Decode.int)
-        (Decode.field "y" Decode.int)
-        (Decode.field "load" Decode.int)
-        (Decode.field "turret_angle" Decode.float)
-        (Decode.field "direction" directionDecoder)
-        (Decode.field "health" Decode.int)
+    Decode.succeed Tank
+        |> required "player_name" Decode.string
+        |> required "x" Decode.int
+        |> required "y" Decode.int
+        |> required "load" Decode.int
+        |> required "turret_angle" Decode.float
+        |> required "direction" directionDecoder
+        |> required "health" Decode.int
+        |> required "alive_time" Decode.int
 
 
 bulletDecoder : Decoder Bullet
 bulletDecoder =
-    Decode.map2 Bullet
-        (Decode.field "x" Decode.int)
-        (Decode.field "y" Decode.int)
+    Decode.succeed Bullet
+        |> required "x" Decode.int
+        |> required "y" Decode.int
 
 
 directionDecoder : Decoder Direction
