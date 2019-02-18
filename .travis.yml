@@ -12,7 +12,5 @@ jobs:
 
     - stage: "Deploy"
       if: branch = master AND type = push
-      language: elixir
-      elixir: "1.8.0"
-      otp_release: "21.2"
+      language: minimal
       script: bash scripts/deploy.sh
