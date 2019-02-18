@@ -26,19 +26,6 @@ defmodule Tanks.GameLogic.Tank do
             turret_angle: 0.0,
             turret_angle_velocity: 0.0
 
-  def to_api(tank) do
-    %{
-      player_name: tank.player_name,
-      x: round(tank.x),
-      y: round(tank.y),
-      health: tank.health,
-      turret_angle: tank.turret_angle,
-      load: tank.load,
-      direction: tank.direction,
-      alive_time: tank.alive_ticks |> Tanks.GameLogic.Battle.ticks_to_seconds()
-    }
-  end
-
   def start_link({player_name, seed}) do
     GenServer.start_link(__MODULE__, {:ok, player_name, seed}, [])
   end
@@ -244,5 +231,36 @@ defmodule Tanks.GameLogic.Tank do
 
   defp increment_alive_ticks(tank) do
     %Tank{tank | alive_ticks: tank.alive_ticks + 1}
+  end
+
+  defmodule Broadcast do
+    alias Tanks.GameLogic.Tank
+
+    @derive Jason.Encoder
+    @enforce_keys [:player_name, :alive_time, :health, :x, :y, :load, :direction, :turret_angle]
+    defstruct [:player_name, :alive_time, :health, :x, :y, :load, :direction, :turret_angle]
+
+    @doc """
+    Creates a broadcast ready object
+
+      # Example
+
+      iex> tank = %Tanks.GameLogic.Tank{}
+      iex> Tanks.GameLogic.Tank.Broadcast.from_tank(tank)
+      %Tanks.GameLogic.Tank.Broadcast{player_name: "", x: 0, y: 560, health: 100, turret_angle: 0.0, load: 100, direction: :right, alive_time: 0}
+
+    """
+    def from_tank(tank = %Tank{}) do
+      %Tank.Broadcast{
+        player_name: tank.player_name,
+        x: round(tank.x),
+        y: round(tank.y),
+        health: tank.health,
+        turret_angle: tank.turret_angle,
+        load: tank.load,
+        direction: tank.direction,
+        alive_time: tank.alive_ticks |> Tanks.GameLogic.Battle.ticks_to_seconds()
+      }
+    end
   end
 end

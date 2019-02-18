@@ -3,7 +3,6 @@ defmodule Tanks.GameLogic.Bullet do
   alias Tanks.GameLogic.Field
 
   @enforce_keys [:x, :y, :velocity_x, :velocity_y]
-  @derive {Jason.Encoder, only: [:x, :y]}
   defstruct width: 3, height: 3, x: 0, y: 0, velocity_x: 0, velocity_y: 0
 
   @doc """
@@ -20,10 +19,28 @@ defmodule Tanks.GameLogic.Bullet do
     |> Field.move_object()
   end
 
-  def to_api(%Bullet{x: x, y: y}) do
-    %{
-      x: round(x),
-      y: round(y)
-    }
+  defmodule Broadcast do
+    alias Tanks.GameLogic.Bullet
+
+    @derive Jason.Encoder
+    @enforce_keys [:x, :y]
+    defstruct [:x, :y]
+
+    @doc """
+    Creates a broadcast ready object
+
+      # Example
+
+      iex> bullet = %Tanks.GameLogic.Bullet{x: 0, y: 10, velocity_x: 10, velocity_y: 10}
+      iex> Tanks.GameLogic.Bullet.Broadcast.from_bullet(bullet)
+      %Tanks.GameLogic.Bullet.Broadcast{x: 0, y: 10}
+
+    """
+    def from_bullet(%Bullet{x: x, y: y}) do
+      %Bullet.Broadcast{
+        x: round(x),
+        y: round(y)
+      }
+    end
   end
 end

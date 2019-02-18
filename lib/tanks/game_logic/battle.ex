@@ -1,10 +1,3 @@
-defmodule Tanks.GameLogic.Battle.Broadcast do
-  @derive Jason.Encoder
-  defstruct bullets: [],
-            tanks: [],
-            remaining_time: 5 * 60
-end
-
 defmodule Tanks.GameLogic.Battle do
   use GenServer, restart: :temporary
 
@@ -20,7 +13,7 @@ defmodule Tanks.GameLogic.Battle do
             bullets: [],
             remaining_ticks: round(5 * 60 * 1000 / @tick_rate),
             subscribers: Map.new(),
-            prev_broadcast: %Battle.Broadcast{}
+            prev_broadcast: Map.new()
 
   def start_link({tank_sup_pid, name}) when is_pid(tank_sup_pid) do
     GenServer.start_link(__MODULE__, {:ok, tank_sup_pid, name}, [])
@@ -197,7 +190,7 @@ defmodule Tanks.GameLogic.Battle do
           bullets: remaining_bullets,
           remaining_ticks: remaining_ticks
         }
-        |> to_api
+        |> Battle.Broadcast.from_battle()
 
       if state.prev_broadcast != next_broadcast do
         state.subscribers
@@ -304,14 +297,6 @@ defmodule Tanks.GameLogic.Battle do
     (ticks * @tick_rate / 1000) |> round()
   end
 
-  def to_api(%{tanks: tanks, bullets: bullets, remaining_ticks: remaining_ticks}) do
-    %Battle.Broadcast{
-      tanks: tanks |> Enum.map(&Tank.to_api(&1)),
-      bullets: bullets |> Enum.map(&Bullet.to_api(&1)),
-      remaining_time: remaining_ticks |> ticks_to_seconds
-    }
-  end
-
   def get_hits(tank_pids, bullets) do
     hit_bullets =
       for tank_pid <- tank_pids, bullet <- bullets do
@@ -343,5 +328,31 @@ defmodule Tanks.GameLogic.Battle do
     get_tank_states(tanks)
     |> Enum.filter(fn tank -> tank.health > 0 end)
     |> length()
+  end
+
+  defmodule Broadcast do
+    alias Tanks.GameLogic.Battle
+
+    @derive Jason.Encoder
+    @enforce_keys [:bullets, :tanks, :remaining_time]
+    defstruct [:bullets, :tanks, :remaining_time]
+
+    @doc """
+    Creates a broadcast ready object
+
+      # Example
+
+      iex> battle = %Tanks.GameLogic.Battle{}
+      iex> Tanks.GameLogic.Battle.Broadcast.from_battle(battle)
+      %Tanks.GameLogic.Battle.Broadcast{tanks: [], bullets: [], remaining_time: 300}
+
+    """
+    def from_battle(battle) do
+      %Battle.Broadcast{
+        tanks: battle.tanks |> Enum.map(&Tank.Broadcast.from_tank(&1)),
+        bullets: battle.bullets |> Enum.map(&Bullet.Broadcast.from_bullet(&1)),
+        remaining_time: battle.remaining_ticks |> Battle.ticks_to_seconds()
+      }
+    end
   end
 end

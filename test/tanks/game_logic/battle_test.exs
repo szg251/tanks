@@ -7,7 +7,10 @@ defmodule BattleTest do
   alias Tanks.GameLogic.Bullet
 
   doctest Tanks.GameLogic.Battle
+  doctest Tanks.GameLogic.Battle.Broadcast
   doctest Tanks.GameLogic.Field
+  doctest Tanks.GameLogic.Bullet
+  doctest Tanks.GameLogic.Bullet.Broadcast
 
   setup do
     Application.stop(:tanks)
