@@ -4,11 +4,13 @@ import Browser exposing (Document)
 import Browser.Dom
 import Browser.Events exposing (onAnimationFrame, onKeyDown, onKeyUp, onResize, onVisibilityChange)
 import Channel exposing (Channel, Socket)
+import Data.GameState as GameState exposing (GameState)
 import Data.Player exposing (Player)
 import Data.Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
+import Data.Tank exposing (Tank)
+import Data.Window exposing (Window)
 import Element exposing (..)
-import GameState exposing (Bullet, GameState, Tank)
 import Html
 import Json.Decode as Decode exposing (Decoder)
 import KeyRegister exposing (Key, KeyRegister, KeyState(..))
@@ -42,10 +44,6 @@ type alias Model =
 type Modal
     = NoModal
     | EndBattle (List Tank)
-
-
-type alias Window =
-    { width : Int, height : Int }
 
 
 getWindowSize : Cmd Msg
@@ -100,15 +98,11 @@ view model =
                     , el [ height (px 10) ] (text <| toTime model.gameState.remainingTime)
                     ]
                 , Element.html <|
-                    Svg.svg
-                        [ Svg.Attributes.viewBox "0 0 1000 600"
-                        , Svg.Attributes.width <| String.fromInt (model.window.width - 10)
-                        , Svg.Attributes.height <| String.fromInt (model.window.height - 20)
-                        ]
-                        (GameState.viewField
-                            :: List.map GameState.viewTank model.gameState.tanks
-                            ++ List.map GameState.viewBullet model.gameState.bullets
-                        )
+                    GameState.view
+                        { width = model.window.width - 10
+                        , height = model.window.height - 20
+                        }
+                        model.gameState
                 ]
             )
         ]

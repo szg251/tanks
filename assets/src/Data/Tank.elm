@@ -1,12 +1,7 @@
-module GameState exposing
-    ( Bullet
-    , GameState
-    , Tank
+module Data.Tank exposing
+    ( Tank
     , decoder
-    , tankDecoder
-    , viewBullet
-    , viewField
-    , viewTank
+    , view
     )
 
 import Json.Decode as Decode exposing (Decoder)
@@ -15,18 +10,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 
-type alias GameState =
-    { tanks : List Tank
-    , bullets : List Bullet
-    , remainingTime : Int
-    }
-
-
 type alias Position =
-    { x : Int, y : Int }
-
-
-type alias Bullet =
     { x : Int, y : Int }
 
 
@@ -178,8 +162,8 @@ healthIndicator direction health =
         []
 
 
-viewTank : Tank -> Svg msg
-viewTank tank =
+view : Tank -> Svg msg
+view tank =
     svg
         [ x <| String.fromInt tank.x
         , y <| String.fromInt tank.y
@@ -201,48 +185,8 @@ viewTank tank =
         ]
 
 
-viewField : Svg msg
-viewField =
-    line
-        [ x1 "0"
-        , y1 "600"
-        , x2 "1000"
-        , y2 "600"
-        , stroke "black"
-        ]
-        []
-
-
-
--- Bullet
-
-
-viewBullet : Bullet -> Svg msg
-viewBullet p =
-    circle
-        [ cx <| String.fromInt p.x
-        , cy <| String.fromInt p.y
-        , r "1"
-        , fill "black"
-        , stroke "black"
-        ]
-        []
-
-
-
--- Decoders
-
-
-decoder : Decoder GameState
+decoder : Decoder Tank
 decoder =
-    Decode.succeed GameState
-        |> required "tanks" (Decode.list tankDecoder)
-        |> required "bullets" (Decode.list bulletDecoder)
-        |> required "remaining_time" Decode.int
-
-
-tankDecoder : Decoder Tank
-tankDecoder =
     Decode.succeed Tank
         |> required "player_name" Decode.string
         |> required "x" Decode.int
@@ -252,13 +196,6 @@ tankDecoder =
         |> required "direction" directionDecoder
         |> required "health" Decode.int
         |> required "alive_time" Decode.int
-
-
-bulletDecoder : Decoder Bullet
-bulletDecoder =
-    Decode.succeed Bullet
-        |> required "x" Decode.int
-        |> required "y" Decode.int
 
 
 directionDecoder : Decoder Direction

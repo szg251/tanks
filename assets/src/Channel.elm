@@ -12,7 +12,8 @@ port module Channel exposing
     , subscribe
     )
 
-import GameState exposing (GameState, Tank)
+import Data.GameState as GameState exposing (GameState)
+import Data.Tank as Tank exposing (Tank)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 
@@ -141,7 +142,7 @@ responseDecoder =
                         |> Decode.map Sync
 
                 "end_battle" ->
-                    Decode.field "value" (Decode.field "tanks" (Decode.list GameState.tankDecoder))
+                    Decode.field "value" (Decode.field "tanks" (Decode.list Tank.decoder))
                         |> Decode.map EndBattle
 
                 _ ->
