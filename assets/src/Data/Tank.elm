@@ -6,7 +6,7 @@ module Data.Tank exposing
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
-import Svg exposing (..)
+import Svg exposing (Svg, circle, line, polygon, svg, text, text_)
 import Svg.Attributes exposing (..)
 
 
@@ -140,26 +140,27 @@ loadIndicator direction load =
         []
 
 
-healthIndicator : Direction -> Int -> Svg msg
-healthIndicator direction health =
-    let
-        ( p1, p2 ) =
-            case direction of
-                Left ->
-                    ( Position (40 - health // 5) 14, Position 40 14 )
-
-                Right ->
-                    ( Position 30 14, Position (30 + health // 5) 14 )
-    in
+healthIndicator : Int -> Svg msg
+healthIndicator health =
     line
-        [ x1 <| String.fromInt p1.x
-        , y1 <| String.fromInt p1.y
-        , x2 <| String.fromInt p2.x
-        , y2 <| String.fromInt p2.y
+        [ x1 "0"
+        , y1 "0"
+        , x2 <| String.fromInt <| health * 7 // 10
+        , y2 "0"
         , stroke "blue"
-        , strokeWidth "2"
         ]
         []
+
+
+namePlate : String -> Svg msg
+namePlate playerName =
+    text_
+        [ x "50%"
+        , y "8"
+        , style "font: 8px sans-serif"
+        , textAnchor "middle"
+        ]
+        [ text <| shortenName playerName ]
 
 
 view : Tank -> Svg msg
@@ -167,11 +168,14 @@ view tank =
     svg
         [ x <| String.fromInt tank.x
         , y <| String.fromInt tank.y
+        , width "70"
+        , height "40"
         ]
-        [ body
+        [ namePlate tank.playerName
+        , body
         , turretBase tank.direction
         , loadIndicator tank.direction tank.load
-        , healthIndicator tank.direction tank.health
+        , healthIndicator tank.health
         , turret tank.direction tank.turretAngle
         , wheel { x = 10, y = 30 }
         , wheel { x = 20, y = 35 }
@@ -213,3 +217,12 @@ directionDecoder =
                     _ ->
                         Decode.fail "invalid direction"
             )
+
+
+shortenName : String -> String
+shortenName name =
+    if String.length name > 10 then
+        String.slice 0 10 name ++ "..."
+
+    else
+        name
