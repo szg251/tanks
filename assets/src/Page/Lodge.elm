@@ -8,6 +8,7 @@ import Data.Session as Session exposing (Session)
 import Data.String20 as String20 exposing (String20)
 import Element exposing (..)
 import Element.Input as Input
+import Element.Region exposing (heading)
 import Http
 import LocalStorage
 import RemoteData exposing (RemoteData(..), WebData)
@@ -62,7 +63,7 @@ init session =
 
 view : Model -> Document Msg
 view model =
-    { title = "Lodge"
+    { title = "Tanks - Lodge"
     , body =
         [ Element.layout []
             (case model.battles of
@@ -83,7 +84,8 @@ view model =
 
 viewHeader : Element Msg
 viewHeader =
-    row [ width fill, height (px 50) ] [ el [ centerX, centerY ] (text "Lodge") ]
+    row [ width fill, height (px 50) ]
+        [ el [ heading 1, centerX, centerY ] (text "Lodge") ]
 
 
 viewUserForm : Session -> Validated String20 -> Element Msg
