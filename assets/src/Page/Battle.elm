@@ -75,7 +75,7 @@ init session player battleName =
 
 view : Model -> Document Msg
 view model =
-    { title = "Battle"
+    { title = "Tanks - Battle: " ++ String20.value model.battleName
     , body =
         [ Element.layout
             [ inFront
